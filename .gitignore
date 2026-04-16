@@ -1,0 +1,36 @@
+/web/public/hot
+/web/public/storage
+/web/storage/*.key
+/web/storage/db.sqlite
+/web/vendor
+/web/composer.lock
+.env
+.env.*
+!.env.example
+!.env.testing
+web/.phpunit.result.cache
+docker-compose.override.yml
+Homestead.json
+Homestead.yaml
+npm-debug.log
+yarn-error.log
+
+**/node_modules
+
+.idea
+.vscode
+
+# Ignore shopify files created during app dev
+.shopify/*
+.shopify.lock
+
+# ignore cookies
+cookies.txt
+
+# Lock files at repo root (CI expects these not to be committed)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Ignore macOS files
+.DS_Store

@@ -1,0 +1,5 @@
+roles = ["frontend", "backend"]
+
+[commands]
+dev = "composer serve"
+build = "composer build"
