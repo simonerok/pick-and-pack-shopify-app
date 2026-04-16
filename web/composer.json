@@ -18,7 +18,7 @@
         "livewire/volt": "^1.7.0",
         "predis/predis": "^3.4",
         "shopify/shopify-api": "^6.0",
-        "spatie/laravel-activitylog": "^4.12",
+        "spatie/laravel-activitylog": "^5.0",
         "squizlabs/php_codesniffer": "^3.10",
         "symfony/http-client": "^8.0",
         "symfony/mailgun-mailer": "^8.0"
