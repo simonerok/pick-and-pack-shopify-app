@@ -3,3 +3,7 @@
 *.scss linguist-vendored
 *.js linguist-vendored
 CHANGELOG.md export-ignore
+#make sure line ending in git is correct (from Unix - Windows)
+*.php text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
