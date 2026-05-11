@@ -17,6 +17,17 @@
             </template>
         </div>
     </td>
+    {{-- Old archived row skipped the Gift cell here, so every column after Order was shifted left. --}}
+    <td class="px-4 py-2 text-xs" data-label="Gift">
+        <template x-if="Array.isArray(order.tags) && order.tags.includes('Gift')">
+            <span class="text-slate-600 font-normal inline-flex items-center" aria-label="Gift order">
+                <x-heroicon-o-gift class="w-4 h-4" />
+            </span>
+        </template>
+        <template x-if="!Array.isArray(order.tags) || !order.tags.includes('Gift')">
+            <span class="text-slate-600 font-normal">&mdash;</span>
+        </template>
+    </td>
     <td class="px-4 py-2 text-xs" data-label="Customer">
         <div class="text-slate-700" x-text="order.billing_address ? (order.billing_address.first_name + ' ' + order.billing_address.last_name) : '—'"></div>
         <div class="text-slate-500 truncate max-w-[180px]" x-show="order.email" x-text="order.email"></div>
@@ -78,7 +89,7 @@
     </td>
 </tr>
 <tr class="bg-slate-50/80" x-show="isShippedExpanded(order.id)" x-transition>
-    <td colspan="7" class="px-4 py-4">
+    <td colspan="8" class="px-4 py-4">
         <div class="space-y-4 text-xs">
             <div>
                 <h4 class="font-medium text-slate-700 mb-1.5 text-xs">Products</h4>
@@ -87,8 +98,11 @@
                         <table class="w-full text-left text-xs">
                             <thead>
                                 <tr class="border-b border-slate-200 bg-slate-100/80">
+                                    {{-- Old columns: Name, Variant, Committed qty, Available qty, Price, Actions --}}
                                     <th class="px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-slate-500">Name</th>
+                                    <th class="px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-slate-500 w-40">GIA</th>
                                     <th class="px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-slate-500">Variant</th>
+                                    <th class="px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-slate-500 text-right tabular-nums">Qty</th>
                                     <th class="px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-slate-500 text-right tabular-nums">Committed qty</th>
                                     <th class="px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-slate-500 text-right tabular-nums">Available qty</th>
                                     <th class="px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-slate-500 text-right">Price</th>
@@ -99,7 +113,10 @@
                                 <template x-for="(item, i) in order.line_items" :key="i">
                                     <tr class="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50">
                                         <td class="px-3 py-2 text-slate-800"><span x-text="item.title"></span><span x-show="item.custom_item" class="text-slate-500 ml-1">(custom item)</span></td>
-                                        <td class="px-3 py-2 text-slate-600" x-text="(item.variant_options && item.variant_options.length > 0) ? item.variant_options.map(o => o.name + ': ' + o.value).join(', ') : '—'"></td>
+                                        <td class="px-3 py-2 text-slate-600" x-text="item.gia_report || '—'"></td>
+                                        {{-- Old: <td class="px-3 py-2 text-slate-600" x-text="(item.variant_options && item.variant_options.length > 0) ? item.variant_options.map(o => o.name + ': ' + o.value).join(', ') : '—'"></td> --}}
+                                        <td class="px-3 py-2 text-slate-600" x-text="variantLabel(item)"></td>
+                                        <td class="px-3 py-2 text-slate-600 text-right tabular-nums" x-text="item.quantity ?? 0"></td>
                                         <td class="px-3 py-2 text-slate-600 text-right tabular-nums" x-text="item.custom_item ? '—' : (item.committed_quantity ?? 0)"></td>
                                         <td class="px-3 py-2 text-slate-600 text-right tabular-nums" x-text="item.custom_item ? '—' : availableQuantity(item)"></td>
                                         <td class="px-3 py-2 text-slate-600 text-right tabular-nums" x-text="formatMoney(item.unit_price, item.currency)"></td>

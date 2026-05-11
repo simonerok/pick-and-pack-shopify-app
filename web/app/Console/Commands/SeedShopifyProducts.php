@@ -10,6 +10,7 @@ class SeedShopifyProducts extends Command
     protected $signature = 'shopify:seed-test-products
                             {--dry-run : Print the GraphQL variables only, do not call Shopify}
                             {--count=30 : Number of products to create, up to the 30 curated seed products}
+                            {--start=1 : 1-based catalog product number to start from}
                             {--delay-ms=500 : Delay between productCreate calls}
                             {--location-id= : Shopify location ID to stock inventory at}
                             {--skip-inventory : Create products without setting Shopify inventory quantities}
@@ -38,7 +39,7 @@ GQL;
 
     private const PRODUCT_VARIANTS_BULK_CREATE_MUTATION = <<<'GQL'
 mutation SeedProductVariantCreate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
-  productVariantsBulkCreate(productId: $productId, variants: $variants, strategy: DEFAULT) {
+  productVariantsBulkCreate(productId: $productId, variants: $variants, strategy: REMOVE_STANDALONE_VARIANT) {
     userErrors {
       field
       message
@@ -147,14 +148,28 @@ GQL;
             $locationName = $locationId;
         }
 
-        $count = $this->positiveIntOption('count', 30);
-        if ($count > count($this->catalog())) {
-            $this->warn('Only 30 curated products are defined; creating 30 products.');
-            $count = count($this->catalog());
+        $catalogCount = count($this->catalog());
+        $start = $this->positiveIntOption('start', 1);
+        if ($start > $catalogCount) {
+            $this->error(sprintf('Only %d curated products are defined. Use --start=%d or lower.', $catalogCount, $catalogCount));
+
+            return self::FAILURE;
+        }
+
+        $count = $this->positiveIntOption('count', $catalogCount);
+        $availableCount = $catalogCount - $start + 1;
+        if ($count > $availableCount) {
+            $this->warn(sprintf(
+                'Only %d curated products are available from product %d; creating %d products.',
+                $availableCount,
+                $start,
+                $availableCount
+            ));
+            $count = $availableCount;
         }
 
         $delayMs = max(0, $this->positiveIntOption('delay-ms', 500));
-        $plan = $this->buildPlan($locationId, $count, $skipInventory);
+        $plan = $this->buildPlan($locationId, $count, $skipInventory, $start);
 
         $this->warn(
             $skipInventory
@@ -166,6 +181,7 @@ GQL;
             count($plan),
             $dryRun ? '(dry run)' : 'against ' . $this->host
         ));
+        $this->line(sprintf('Seed product range: %d-%d.', $start, $start + count($plan) - 1));
         if ($skipInventory) {
             $this->line('Inventory quantities: skipped.');
         } else {
@@ -181,9 +197,10 @@ GQL;
         $failures = 0;
         foreach ($plan as $index => $row) {
             $this->line(sprintf(
-                '[%d/%d] %s / qty %d / %s',
+                '[%d/%d] #%d %s / qty %d / %s',
                 $index + 1,
                 count($plan),
+                $row['seed_number'],
                 $row['label'],
                 $row['quantity'],
                 $row['sku']
@@ -334,6 +351,7 @@ GQL;
 
     /**
      * @return list<array{
+     *     seed_number: int,
      *     label: string,
      *     quantity: int,
      *     sku: string,
@@ -341,11 +359,12 @@ GQL;
      *     variant: array<string, mixed>
      * }>
      */
-    private function buildPlan(?string $locationId, int $count, bool $skipInventory): array
+    private function buildPlan(?string $locationId, int $count, bool $skipInventory, int $start = 1): array
     {
         $plan = [];
-        foreach (array_slice($this->catalog(), 0, $count) as $item) {
+        foreach (array_slice($this->catalog(), $start - 1, $count) as $index => $item) {
             $plan[] = [
+                'seed_number' => $start + $index,
                 'label' => $item['title'],
                 'quantity' => $item['quantity'],
                 'sku' => $item['sku'],

@@ -11,6 +11,7 @@ class SeedShopifyOrders extends Command
                             {--dry-run : Print the GraphQL variables only, do not call Shopify}
                             {--variant-id= : Numeric Shopify product variant ID}
                             {--count=30 : Number of orders to create}
+                            {--start=1 : 1-based order plan number to start from}
                             {--delay-ms=13000 : Delay between orderCreate calls}
                             {--continue-on-error : Keep creating orders after an error}';
 
@@ -137,6 +138,7 @@ GQL;
         }
 
         $count = $this->positiveIntOption('count', 30);
+        $start = $this->positiveIntOption('start', 1);
         $delayMs = max(0, $this->positiveIntOption('delay-ms', 13000));
         $variantId = $this->variantIdOption();
         $currency = $dryRun ? 'DKK' : $this->resolveShopCurrency();
@@ -175,13 +177,14 @@ GQL;
             );
         }
 
-        $plan = $this->buildPlan($variants, $currency, $count);
+        $plan = $this->buildPlan($variants, $currency, $count, $start);
         $this->warn('This creates REAL Shopify orders. Use a development store only.');
         $this->line(sprintf(
             'Plan: %d orders via Admin GraphQL %s.',
             count($plan),
             $dryRun ? '(dry run)' : 'against ' . $this->host
         ));
+        $this->line(sprintf('Seed order plan range: %d-%d.', $start, $start + count($plan) - 1));
 
         if (! $dryRun && ! $this->confirm('Continue?', false)) {
             return self::SUCCESS;
@@ -189,7 +192,7 @@ GQL;
 
         $failures = 0;
         foreach ($plan as $index => $row) {
-            $this->line(sprintf('[%d/%d] %s', $index + 1, count($plan), $row['label']));
+            $this->line(sprintf('[%d/%d] #%d %s', $index + 1, count($plan), $row['seed_number'], $row['label']));
 
             if ($dryRun) {
                 $this->line(json_encode($row['variables'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
@@ -334,6 +337,7 @@ GQL;
         }
 
         $seeded = [];
+        $seenVariantKeys = [];
         foreach ($products as $product) {
             if (! is_array($product)) {
                 continue;
@@ -356,6 +360,11 @@ GQL;
                 if ($id === '' || ! $this->isSeededProduct($tags, $sku)) {
                     continue;
                 }
+                $variantKey = $sku !== '' ? $sku : $id;
+                if (isset($seenVariantKeys[$variantKey])) {
+                    continue;
+                }
+                $seenVariantKeys[$variantKey] = true;
 
                 $productTitle = (string) ($product['title'] ?? 'Seed product');
                 $variantTitle = (string) ($variant['title'] ?? '');
@@ -493,15 +502,17 @@ GQL;
 
     /**
      * @return list<array{
+     *     seed_number: int,
      *     label: string,
      *     variables: array<string, mixed>,
      *     tags: list<string>,
      *     closeAfterCreate?: bool
      * }>
      */
-    private function buildPlan(array $variants, string $currency, int $count): array
+    private function buildPlan(array $variants, string $currency, int $count, int $start = 1): array
     {
-        $buckets = $this->bucketCounts($count);
+        $end = $start + $count - 1;
+        $buckets = $this->bucketCounts($end);
         $plan = [];
 
         for ($i = 0; $i < $buckets['ready']; $i++) {
@@ -549,7 +560,12 @@ GQL;
             );
         }
 
-        return array_slice($plan, 0, $count);
+        $plan = array_slice($plan, $start - 1, $count);
+        foreach ($plan as $index => $row) {
+            $plan[$index]['seed_number'] = $start + $index;
+        }
+
+        return $plan;
     }
 
     /**
@@ -622,6 +638,34 @@ GQL;
         ));
 
         if ($pool === []) {
+            if (count($variants) === 1 && ($variants[0]['stock_bucket'] ?? '') === 'manual') {
+                return $variants[0];
+            }
+
+            throw new \RuntimeException(
+                'No seeded product variants found for stock bucket(s): '
+                . implode(', ', $preferredBuckets)
+                . '. Seed at least one available product first, for example: '
+                . 'php artisan shopify:seed-test-products --count=5'
+            );
+        }
+
+        return $pool[$index % count($pool)];
+    }
+
+    /**
+     * @param  list<array{id: string, price: string, label: string, sku: string, stock_bucket: string}>  $variants
+     * @param  list<string>  $preferredBuckets
+     * @return array{id: string, price: string, label: string, sku: string, stock_bucket: string}
+     */
+    private function selectVariantOrFallback(array $variants, array $preferredBuckets, int $index): array
+    {
+        $pool = array_values(array_filter(
+            $variants,
+            static fn(array $variant): bool => in_array($variant['stock_bucket'], $preferredBuckets, true)
+        ));
+
+        if ($pool === []) {
             $pool = $variants;
         }
 
@@ -651,57 +695,19 @@ GQL;
         bool $fulfilled
     ): array {
         $seed = $this->variantSeedNumber($variant);
-        $properties = [
-            ['name' => 'Gift wrap', 'value' => $seed % 3 === 0 ? 'Yes' : 'No'],
-            ['name' => 'Packaging', 'value' => $this->pickFakeValue(['Classic box', 'Travel pouch', 'Ribbon box'], $seed)],
-            ['name' => 'Quality control', 'value' => 'Photo check before packing'],
-        ];
-
-        if ($seed % 4 === 0) {
-            $properties[] = [
-                'name' => 'Gift message',
-                'value' => $this->pickFakeValue([
-                    'Happy birthday - enjoy your special day',
-                    'A little sparkle for you',
-                    'Congratulations on the big moment',
-                    'With love from your family',
-                ], $seed),
-            ];
-        }
+        $properties = [[
+            'name' => 'Gift note',
+            'value' => $this->pickFakeValue([
+                'Happy birthday - enjoy your special day',
+                'A little sparkle for you',
+                'Congratulations on the big moment',
+                'With love from your family',
+            ], $seed),
+        ]];
 
         $productType = $this->productTypeFromVariantLabel($variant['label']);
         if ($productType === 'ring') {
             $properties[] = ['name' => 'Ring size', 'value' => $this->pickFakeValue(['50', '52', '54', '56', '58'], $seed)];
-            if ($seed % 2 === 0) {
-                $properties[] = ['name' => 'Engraving', 'value' => $this->pickFakeValue(['A+M', 'Forever', '12.06.26'], $seed)];
-            }
-        } elseif ($productType === 'necklace') {
-            $properties[] = ['name' => 'Chain length', 'value' => $this->pickFakeValue(['42 cm', '45 cm', '50 cm'], $seed)];
-        } elseif ($productType === 'bracelet') {
-            $properties[] = ['name' => 'Wrist size', 'value' => $this->pickFakeValue(['16 cm', '17 cm', '18 cm'], $seed)];
-        } elseif ($productType === 'earrings') {
-            $properties[] = ['name' => 'Backing', 'value' => $this->pickFakeValue(['Butterfly backs', 'Screw backs'], $seed)];
-        }
-
-        if (in_array($variant['stock_bucket'], ['out', 'low'], true)) {
-            $properties[] = [
-                'name' => 'Availability note',
-                'value' => $variant['stock_bucket'] === 'out'
-                    ? 'Customer accepts waiting for restock'
-                    : 'Reserve available units and wait for balance',
-            ];
-        }
-
-        if ($financialStatus === 'PENDING') {
-            $properties[] = ['name' => 'Payment note', 'value' => 'Awaiting payment confirmation'];
-        }
-
-        if ($fulfilled) {
-            $properties[] = ['name' => 'Packing note', 'value' => 'Packed in seeded fulfilment flow'];
-        }
-
-        if ($quantity > 1) {
-            $properties[] = ['name' => 'Quantity note', 'value' => 'Pack as one order'];
         }
 
         return $properties;
@@ -713,9 +719,7 @@ GQL;
     private function customLineItemProperties(): array
     {
         return [
-            ['name' => 'Service type', 'value' => $this->pickFakeValue(['Resize', 'Repair', 'Cleaning', 'Stone setting'], random_int(1, 100))],
-            ['name' => 'Customer note', 'value' => 'Please confirm details before workshop handoff'],
-            ['name' => 'Workshop priority', 'value' => $this->pickFakeValue(['Normal', 'Rush', 'Awaiting parts'], random_int(1, 100))],
+            ['name' => 'Gift note', 'value' => 'Please wrap this nicely as a surprise'],
         ];
     }
 
@@ -769,7 +773,7 @@ GQL;
      */
     private function customLinePrice(array $variants): string
     {
-        $variant = $this->selectVariant($variants, ['medium', 'high'], 0);
+        $variant = $this->selectVariantOrFallback($variants, ['medium', 'high'], 0);
 
         return $variant['price'];
     }
@@ -778,6 +782,7 @@ GQL;
      * @param  array<string, mixed>  $order
      * @param  list<string>  $tags
      * @return array{
+     *     seed_number?: int,
      *     label: string,
      *     variables: array<string, mixed>,
      *     tags: list<string>,
