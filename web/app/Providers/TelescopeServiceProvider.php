@@ -61,8 +61,7 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
             return in_array($user->email, [
                 // users allowed to view Telescope dashboard
                 // TO DO: Edit for production
-                'sofia@wecode.dk',
-                'sbb@mail.com'
+                'sofia@example.com',
             ]);
         });
     }

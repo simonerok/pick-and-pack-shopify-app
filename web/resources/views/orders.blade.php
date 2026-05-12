@@ -71,13 +71,13 @@
 
                 <tbody>
                     <tr x-show="activeTab === 'ready-to-pack' && readyToPackLoading">
-                        <td colspan="10" class="px-4 py-6 text-center text-slate-500 text-xs">
+                        <td colspan="11" class="px-4 py-6 text-center text-slate-500 text-xs">
                             <span class="inline-block w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin align-middle mr-2"></span>
                             Loading ready to pack orders…
                         </td>
                     </tr>
                     <tr x-show="activeTab === 'ready-to-pack' && !readyToPackLoading && readyToPackError">
-                        <td colspan="10" class="px-4 py-6 text-center text-amber-700 text-xs" x-text="readyToPackError"></td>
+                        <td colspan="11" class="px-4 py-6 text-center text-amber-700 text-xs" x-text="readyToPackError"></td>
                     </tr>
                 </tbody>
                 <template x-for="order in readyToPackOrdersToShow" :key="'rtp-'+order.id">
@@ -85,21 +85,21 @@
                 </template>
                 <tbody>
                     <tr x-show="activeTab === 'ready-to-pack' && !readyToPackLoading && !readyToPackError && readyToPackFilteredAndSorted.length === 0">
-                        <td colspan="10" class="px-4 py-6 text-center text-slate-500 text-xs">No paid orders to pack.</td>
+                        <td colspan="11" class="px-4 py-6 text-center text-slate-500 text-xs">No paid orders to pack.</td>
                     </tr>
                     <tr x-show="activeTab === 'ready-to-pack' && !readyToPackLoading && !readyToPackError && readyToPackFilteredAndSorted.length > 0 && readyToPackOrdersToShow.length === 0">
-                        <td colspan="10" class="px-4 py-6 text-center text-slate-500 text-xs">Paid orders not available yet.</td>
+                        <td colspan="11" class="px-4 py-6 text-center text-slate-500 text-xs">Paid orders not available yet.</td>
                     </tr>
                 </tbody>
                 <tbody>
                     <tr x-show="activeTab === 'ready-for-pickup' && readyForPickupLoading">
-                        <td colspan="10" class="px-4 py-6 text-center text-slate-500 text-xs">
+                        <td colspan="11" class="px-4 py-6 text-center text-slate-500 text-xs">
                             <span class="inline-block w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin align-middle mr-2"></span>
                             Loading ready for pickup orders…
                         </td>
                     </tr>
                     <tr x-show="activeTab === 'ready-for-pickup' && !readyForPickupLoading && readyForPickupError">
-                        <td colspan="10" class="px-4 py-6 text-center text-amber-700 text-xs" x-text="readyForPickupError"></td>
+                        <td colspan="11" class="px-4 py-6 text-center text-amber-700 text-xs" x-text="readyForPickupError"></td>
                     </tr>
                 </tbody>
                 <template x-for="order in readyForPickupOrdersToShow" :key="'rfp-'+order.id">
@@ -107,19 +107,19 @@
                 </template>
                 <tbody>
                     <tr x-show="activeTab === 'ready-for-pickup' && !readyForPickupLoading && !readyForPickupError && readyForPickupFilteredAndSorted.length === 0">
-                        <td colspan="10" class="px-4 py-6 text-center text-slate-500 text-xs">No ready for pickup orders in the last 2 months.</td>
+                        <td colspan="11" class="px-4 py-6 text-center text-slate-500 text-xs">No ready for pickup orders in the last 2 months.</td>
                     </tr>
                 </tbody>
                 <!-- 4. On hold tab -->
                 <tbody>
                     <tr x-show="activeTab === 'on-hold' && onHoldLoading">
-                        <td colspan="10" class="px-4 py-6 text-center text-slate-500 text-xs">
+                        <td colspan="11" class="px-4 py-6 text-center text-slate-500 text-xs">
                             <span class="inline-block w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin align-middle mr-2"></span>
                             Loading on hold orders…
                         </td>
                     </tr>
                     <tr x-show="activeTab === 'on-hold' && !onHoldLoading && onHoldError">
-                        <td colspan="10" class="px-4 py-6 text-center text-amber-700 text-xs" x-text="onHoldError"></td>
+                        <td colspan="11" class="px-4 py-6 text-center text-amber-700 text-xs" x-text="onHoldError"></td>
                     </tr>
                 </tbody>
                 <template x-for="order in onHoldOrdersToShow" :key="'onhold-'+order.id">
@@ -127,20 +127,20 @@
                 </template>
                 <tbody>
                     <tr x-show="activeTab === 'on-hold' && !onHoldLoading && !onHoldError && onHoldFilteredAndSorted.length === 0">
-                        <td colspan="10" class="px-4 py-6 text-center text-slate-500 text-xs">No on hold orders or non-available orders in the last 2 months.</td>
+                        <td colspan="11" class="px-4 py-6 text-center text-slate-500 text-xs">No on hold orders or non-available orders in the last 2 months.</td>
                     </tr>
                 </tbody>
 
                 <!-- 5. Upcoming tab -->
                 <tbody>
                     <tr x-show="activeTab === 'upcoming' && upcomingLoading">
-                        <td colspan="10" class="px-4 py-6 text-center text-slate-500 text-xs">
+                        <td colspan="11" class="px-4 py-6 text-center text-slate-500 text-xs">
                             <span class="inline-block w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin align-middle mr-2"></span>
                             Loading upcoming orders…
                         </td>
                     </tr>
                     <tr x-show="activeTab === 'upcoming' && !upcomingLoading && upcomingError">
-                        <td colspan="10" class="px-4 py-6 text-center text-amber-700 text-xs" x-text="upcomingError"></td>
+                        <td colspan="11" class="px-4 py-6 text-center text-amber-700 text-xs" x-text="upcomingError"></td>
                     </tr>
                 </tbody>
                 <template x-for="order in upcomingOrdersToShow" :key="'upcoming-'+order.id">
@@ -148,20 +148,20 @@
                 </template>
                 <tbody>
                     <tr x-show="activeTab === 'upcoming' && !upcomingLoading && !upcomingError && upcomingFilteredAndSorted.length === 0">
-                        <td colspan="10" class="px-4 py-6 text-center text-slate-500 text-xs">No upcoming orders in the last 2 months.</td>
+                        <td colspan="11" class="px-4 py-6 text-center text-slate-500 text-xs">No upcoming orders in the last 2 months.</td>
                     </tr>
                 </tbody>
 
                 <!-- 6. Archived tab -->
                 <tbody>
                     <tr x-show="activeTab === 'shipped' && shippedLoading">
-                        <td colspan="7" class="px-4 py-6 text-center text-slate-500 text-xs">
+                        <td colspan="8" class="px-4 py-6 text-center text-slate-500 text-xs">
                             <span class="inline-block w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin align-middle mr-2"></span>
                             Loading archived orders…
                         </td>
                     </tr>
                     <tr x-show="activeTab === 'shipped' && !shippedLoading && shippedError">
-                        <td colspan="7" class="px-4 py-6 text-center text-amber-700 text-xs" x-text="shippedError"></td>
+                        <td colspan="8" class="px-4 py-6 text-center text-amber-700 text-xs" x-text="shippedError"></td>
                     </tr>
                 </tbody>
                 <template x-for="order in shippedOrdersToShow" :key="'shipped-'+order.id">
@@ -169,7 +169,7 @@
                 </template>
                 <tbody>
                     <tr x-show="activeTab === 'shipped' && !shippedLoading && !shippedError && sortedShippedOrders.length === 0">
-                        <td colspan="7" class="px-4 py-6 text-center text-slate-500 text-xs">No archived orders in the last 2 months.</td>
+                        <td colspan="8" class="px-4 py-6 text-center text-slate-500 text-xs">No archived orders in the last 2 months.</td>
                     </tr>
                 </tbody>
             </table>
@@ -245,7 +245,8 @@
                     if (!o.line_items || o.line_items.length === 0) return false;
                     return o.line_items.every(item => {
                         if (item.custom_item) return true;
-                        const avail = (item.inventory_quantity ?? 0) + (item.committed_quantity ?? 0);
+                        // Old: const avail = (item.inventory_quantity ?? 0) + (item.committed_quantity ?? 0);
+                        const avail = item.inventory_quantity ?? 0;
                         return item.quantity <= avail;
                     });
                 };
@@ -282,7 +283,8 @@
                     if (!o.line_items || o.line_items.length === 0) return false;
                     return o.line_items.every(item => {
                         if (item.custom_item) return true;
-                        const avail = (item.inventory_quantity ?? 0) + (item.committed_quantity ?? 0);
+                        // Old: const avail = (item.inventory_quantity ?? 0) + (item.committed_quantity ?? 0);
+                        const avail = item.inventory_quantity ?? 0;
                         return item.quantity <= avail;
                     });
                 };
@@ -316,7 +318,8 @@
                     if (!o.line_items || o.line_items.length === 0) return false;
                     return o.line_items.every(item => {
                         if (item.custom_item) return true;
-                        const avail = (item.inventory_quantity ?? 0) + (item.committed_quantity ?? 0);
+                        // Old: const avail = (item.inventory_quantity ?? 0) + (item.committed_quantity ?? 0);
+                        const avail = item.inventory_quantity ?? 0;
                         return item.quantity <= avail;
                     });
                 };
@@ -350,7 +353,8 @@
                     if (!o.line_items || o.line_items.length === 0) return false;
                     return o.line_items.every(item => {
                         if (item.custom_item) return true;
-                        const avail = (item.inventory_quantity ?? 0) + (item.committed_quantity ?? 0);
+                        // Old: const avail = (item.inventory_quantity ?? 0) + (item.committed_quantity ?? 0);
+                        const avail = item.inventory_quantity ?? 0;
                         return item.quantity <= avail;
                     });
                 };
@@ -384,7 +388,8 @@
                     if (!o.line_items || o.line_items.length === 0) return false;
                     return o.line_items.every(item => {
                         if (item.custom_item) return true;
-                        const avail = (item.inventory_quantity ?? 0) + (item.committed_quantity ?? 0);
+                        // Old: const avail = (item.inventory_quantity ?? 0) + (item.committed_quantity ?? 0);
+                        const avail = item.inventory_quantity ?? 0;
                         return item.quantity <= avail;
                     });
                 };
@@ -517,9 +522,29 @@
                 ].filter(Boolean);
                 return lines.join('\n') || '—';
             },
+            /*
+            Old variant display lived inline in the row partials:
+            (item.variant_options && item.variant_options.length > 0)
+                ? item.variant_options.map(o => o.name + ': ' + o.value).join(', ')
+                : '—'
+            */
+            variantLabel(item) {
+                const options = item.variant_options || [];
+                if (options.length > 0) {
+                    return options.map((option) => option.name + ': ' + option.value).join(', ');
+                }
+                if (item.variant_title && item.variant_title !== 'Default Title') {
+                    return item.variant_title;
+                }
+                if (item.sku) {
+                    return item.sku;
+                }
+                return '-';
+            },
             availableQuantity(item) {
                 if (item.custom_item) return 0;
-                return (item.inventory_quantity ?? 0) + (item.committed_quantity ?? 0);
+                // Old: return (item.inventory_quantity ?? 0) + (item.committed_quantity ?? 0);
+                return item.inventory_quantity ?? 0;
             },
             isAllProductsAvailable(order) {
                 if (!order.line_items || order.line_items.length === 0) return false;

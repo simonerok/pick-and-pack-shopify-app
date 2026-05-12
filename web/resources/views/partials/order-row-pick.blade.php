@@ -128,7 +128,7 @@
         </td>
     </tr>
     <tr class="bg-slate-50/80" x-show="isExpanded(order.id)" x-transition>
-        <td colspan="10" class="px-4 py-4">
+        <td colspan="11" class="px-4 py-4">
             <div class="space-y-4 text-xs">
                 <div>
                     <h4 class="font-medium text-slate-700 mb-1.5 text-xs">Products</h4>
@@ -140,9 +140,11 @@
                             <table class="w-full text-left text-xs">
                                 <thead>
                                     <tr class="border-b border-slate-200 bg-slate-100/80">
+                                        {{-- Old columns: Name, GIA, Variant, Committed qty, Available qty, Price, Actions --}}
                                         <th class="px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-slate-500">Name</th>
                                         <th class="px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-slate-500 w-40">GIA</th>
                                         <th class="px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-slate-500">Variant</th>
+                                        <th class="px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-slate-500 text-right tabular-nums">Qty</th>
                                         <th class="px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-slate-500 text-right tabular-nums">Committed qty</th>
                                         <th class="px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-slate-500 text-right tabular-nums">Available qty</th>
                                         <th class="px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-slate-500 text-right">Price</th>
@@ -154,7 +156,10 @@
                                         <tr class="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50">
                                             <td class="px-3 py-2 text-slate-800">
                                                 <span class="flex items-center gap-2">
-                                                    <span x-show="!item.custom_item" class="flex-shrink-0" :class="(!item.custom_item && item.quantity <= availableQuantity(item)) ? 'text-emerald-600' : 'text-red-600'" :title="(!item.custom_item && item.quantity <= availableQuantity(item)) ? 'In stock or committed – can fulfill' : 'Insufficient stock'" x-text="!item.custom_item && item.quantity <= availableQuantity(item) ? '✓' : '✗'"></span>
+                                                    {{-- Old inline stock marker removed so notes do not appear beside a check/X.
+                                                    <span x-show="!item.custom_item" class="flex-shrink-0" :class="(!item.custom_item && item.quantity <= availableQuantity(item)) ? 'text-emerald-600' : 'text-red-600'" :title="(!item.custom_item && item.quantity <= availableQuantity(item)) ? 'In stock or committed - can fulfill' : 'Insufficient stock'" x-text="!item.custom_item && item.quantity <= availableQuantity(item) ? '✓' : '✗'"></span>
+                                                    --}}
+                                                    {{-- Fixed: stock state is shown in the availability columns, not beside notes. --}}
                                                     <span>
                                                         <span x-text="item.title"></span>
                                                         <span x-show="!item.custom_item && item.quantity > availableQuantity(item) && item.expected_receipt_date" class="text-slate-500 ml-1" :title="'Expected receipt'" x-text="'(ETA: ' + formatDateOnly(item.expected_receipt_date) + ')'"></span>
@@ -170,7 +175,11 @@
                                                 </span>
                                             </td>
                                             <td class="px-3 py-2 align-top w-40 max-w-[10rem] overflow-hidden">
-                                                <template x-if="i === 0 && order.business_central">
+                                                {{-- Old GIA display only showed the BC input on the first BC-backed line and did not render seeded product GIA metafields. --}}
+                                                <template x-if="item.gia_report">
+                                                    <span class="text-slate-600" x-text="item.gia_report"></span>
+                                                </template>
+                                                <template x-if="!item.gia_report && i === 0 && order.business_central">
                                                     <div class="flex flex-col gap-1.5 min-w-0">
                                                         <input type="text" x-model="giaInputByOrderId[order.id]" placeholder="GIA number" class="w-full min-w-0 px-2 py-1 text-[11px] border border-black rounded bg-transparent text-black focus:outline-none focus:ring-1 focus:ring-black/30" :disabled="giaLoadingOrderId === order.id">
                                                         <button type="button" @click="openGiaConfirm(order)" :disabled="!mutationsEnabled || giaLoadingOrderId === order.id || !(giaInputByOrderId[order.id] || '').trim()" class="inline-flex items-center justify-center gap-1 w-full min-w-0 px-2 py-1.5 rounded-md border border-black bg-transparent text-black text-xs font-medium hover:bg-black hover:text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
@@ -182,8 +191,13 @@
                                                         </button>
                                                     </div>
                                                 </template>
+                                                <template x-if="!item.gia_report && !(i === 0 && order.business_central)">
+                                                    <span class="text-slate-500">&mdash;</span>
+                                                </template>
                                             </td>
-                                            <td class="px-3 py-2 text-slate-600" x-text="(item.variant_options && item.variant_options.length > 0) ? item.variant_options.map(o => o.name + ': ' + o.value).join(', ') : '—'"></td>
+                                            {{-- Old: <td class="px-3 py-2 text-slate-600" x-text="(item.variant_options && item.variant_options.length > 0) ? item.variant_options.map(o => o.name + ': ' + o.value).join(', ') : '—'"></td> --}}
+                                            <td class="px-3 py-2 text-slate-600" x-text="variantLabel(item)"></td>
+                                            <td class="px-3 py-2 text-slate-600 text-right tabular-nums" x-text="item.quantity ?? 0"></td>
                                             <td class="px-3 py-2 text-slate-600 text-right tabular-nums" x-text="item.custom_item ? '—' : (item.committed_quantity ?? 0)"></td>
                                             <td class="px-3 py-2 text-slate-600 text-right tabular-nums" x-text="item.custom_item ? '—' : availableQuantity(item)"></td>
                                             <td class="px-3 py-2 text-slate-600 text-right tabular-nums" x-text="formatMoney(item.unit_price, item.currency)"></td>

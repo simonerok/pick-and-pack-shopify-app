@@ -269,6 +269,7 @@ class WebshipperService
                 $body = $createRes->body();
                 $msg = 'Create shipment failed: ' . $status . ' ' . $body;
                 if ($status === 403 && trim($body) === '') {
+                    // phpcs:ignore Generic.Files.LineLength.TooLong
                     $msg .= ' Webshipper refused creation (empty body). API tokens need the write_shipments scope; see https://docs.webshipper.io/#6-scopes and Settings → Access and tokens.';
                 }
 

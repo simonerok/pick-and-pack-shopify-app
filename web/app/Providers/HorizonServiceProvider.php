@@ -31,8 +31,7 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
             return in_array(optional($user)->email, [
                 // Users allowed to view Horizon dashboard
                 // TO DO: Edit for production
-                'sofia@wecode.dk',
-                'sbb@mail.com'
+                'sofia@example.com',
             ]);
         });
     }

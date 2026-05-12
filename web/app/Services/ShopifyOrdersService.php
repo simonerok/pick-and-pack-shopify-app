@@ -281,7 +281,10 @@ class ShopifyOrdersService
     public static function readyOrderForPickup(string $fulfillmentOrderGid): void
     {
         $fulfillmentOrderGid = trim($fulfillmentOrderGid);
-        if ($fulfillmentOrderGid === '' || ! preg_match('#^gid://shopify/FulfillmentOrder/\d+$#', $fulfillmentOrderGid)) {
+        if (
+            $fulfillmentOrderGid === ''
+            || ! preg_match('#^gid://shopify/FulfillmentOrder/\d+$#', $fulfillmentOrderGid)
+        ) {
             throw new \InvalidArgumentException('Invalid fulfillment order GID');
         }
 
@@ -291,7 +294,10 @@ class ShopifyOrdersService
     public static function markOrderAsPickedUp(string $fulfillmentOrderGid): void
     {
         $fulfillmentOrderGid = trim($fulfillmentOrderGid);
-        if ($fulfillmentOrderGid === '' || ! preg_match('#^gid://shopify/FulfillmentOrder/\d+$#', $fulfillmentOrderGid)) {
+        if (
+            $fulfillmentOrderGid === ''
+            || ! preg_match('#^gid://shopify/FulfillmentOrder/\d+$#', $fulfillmentOrderGid)
+        ) {
             throw new \InvalidArgumentException('Invalid fulfillment order GID');
         }
 
@@ -487,7 +493,10 @@ class ShopifyOrdersService
         foreach ($node['lineItems']['edges'] ?? [] as $liEdge) {
             $li = $liEdge['node'] ?? [];
             $committedQuantity = $committedByLineId[$li['id'] ?? ''] ?? 0;
-            $inventoryQuantity = $li['variant']['sellableOnlineQuantity'] ?? null;
+// Old: $inventoryQuantity = $li['variant']['sellableOnlineQuantity'] ?? null;
+            $inventoryQuantity = $li['variant']['inventoryQuantity']
+                ?? $li['variant']['sellableOnlineQuantity']
+                ?? null;
             $customItem = empty($li['variant']);
             $properties = array_map(
                 fn($attr) => ['name' => $attr['key'], 'value' => $attr['value']],
@@ -503,7 +512,13 @@ class ShopifyOrdersService
                     'value' => $opt['value'] ?? '',
                 ];
             }
+            /*
+            Old product lookup:
             $productGid = $li['variant']['product']['id'] ?? null;
+            */
+            $variant = $li['variant'] ?? [];
+            $product = is_array($variant) ? ($variant['product'] ?? []) : [];
+            $productGid = $product['id'] ?? null;
             $unitPriceMoney = $li['discountedUnitPriceSet']['presentmentMoney']
                 ?? $li['originalUnitPriceSet']['presentmentMoney']
                 ?? null;
@@ -514,7 +529,15 @@ class ShopifyOrdersService
                 'unit_price' => $unitPriceMoney['amount'] ?? '0',
                 'currency' => $unitPriceMoney['currencyCode'] ?? $currency,
                 'product_id' => $productGid,
+                /*
+                Old line item variant fields:
                 'sku' => $li['variant']['sku'] ?? null,
+                */
+                'variant_id' => $variant['id'] ?? null,
+                'variant_title' => $variant['title'] ?? null,
+                'sku' => $variant['sku'] ?? null,
+                'product_type' => $product['productType'] ?? null,
+                'gia_report' => $product['metafield']['value'] ?? null,
                 'expected_receipt_date' => null,
                 'inventory_quantity' => $inventoryQuantity,
                 'committed_quantity' => $committedQuantity,
@@ -619,9 +642,15 @@ class ShopifyOrdersService
                 return false;
             }
             $quantity = (int) ($item['quantity'] ?? 0);
+/*
+            Old logic counted committed quantity as available:
             $available = ! empty($item['custom_item'])
                 ? 0
-                : (int) ($item['inventory_quantity'] ?? 0) + (int) ($item['committed_quantity'] ?? 0);
+                : (int) (($item['inventory_quantity'] ?? 0) + ($item['committed_quantity'] ?? 0));
+            */
+            $available = ! empty($item['custom_item'])
+                ? 0
+                : (int) ($item['inventory_quantity'] ?? 0);
             if ($quantity > $available) {
                 return false;
             }

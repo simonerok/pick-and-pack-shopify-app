@@ -102,7 +102,15 @@ query Orders($first: Int!, $query: String, $after: String) {
                 }
               }
               variant {
+                # Old variant fields kept for reference:
+                # sku
+                # sellableOnlineQuantity
+                # selectedOptions { name value }
+                # product { id }
+                id
+                title
                 sku
+                inventoryQuantity
                 sellableOnlineQuantity
                 selectedOptions {
                   name
@@ -110,6 +118,11 @@ query Orders($first: Int!, $query: String, $after: String) {
                 }
                 product {
                   id
+                  title
+                  productType
+                  metafield(namespace: "seed_jewelry", key: "gia_report") {
+                    value
+                  }
                 }
               }
               customAttributes {
