@@ -151,7 +151,11 @@ GQL;
         $catalogCount = count($this->catalog());
         $start = $this->positiveIntOption('start', 1);
         if ($start > $catalogCount) {
-            $this->error(sprintf('Only %d curated products are defined. Use --start=%d or lower.', $catalogCount, $catalogCount));
+            $this->error(sprintf(
+                'Only %d curated products are defined. Use --start=%d or lower.',
+                $catalogCount,
+                $catalogCount
+            ));
 
             return self::FAILURE;
         }

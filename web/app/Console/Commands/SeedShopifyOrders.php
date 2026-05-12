@@ -155,7 +155,10 @@ GQL;
             ));
         } elseif ($dryRun) {
             $variants = $this->placeholderSeedVariants();
-            $this->warn('Dry run: using placeholder seeded product variants. Pass --variant-id= for one fixed variant.');
+            $this->warn(
+                'Dry run: using placeholder seeded product variants. '
+                . 'Pass --variant-id= for one fixed variant.'
+            );
         } else {
             $variants = $this->resolveSeededVariants();
             if ($variants === []) {
@@ -707,7 +710,10 @@ GQL;
 
         $productType = $this->productTypeFromVariantLabel($variant['label']);
         if ($productType === 'ring') {
-            $properties[] = ['name' => 'Ring size', 'value' => $this->pickFakeValue(['50', '52', '54', '56', '58'], $seed)];
+            $properties[] = [
+                'name' => 'Ring size',
+                'value' => $this->pickFakeValue(['50', '52', '54', '56', '58'], $seed),
+            ];
         }
 
         return $properties;

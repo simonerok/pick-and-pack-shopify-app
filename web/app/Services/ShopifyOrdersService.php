@@ -281,7 +281,10 @@ class ShopifyOrdersService
     public static function readyOrderForPickup(string $fulfillmentOrderGid): void
     {
         $fulfillmentOrderGid = trim($fulfillmentOrderGid);
-        if ($fulfillmentOrderGid === '' || ! preg_match('#^gid://shopify/FulfillmentOrder/\d+$#', $fulfillmentOrderGid)) {
+        if (
+            $fulfillmentOrderGid === ''
+            || ! preg_match('#^gid://shopify/FulfillmentOrder/\d+$#', $fulfillmentOrderGid)
+        ) {
             throw new \InvalidArgumentException('Invalid fulfillment order GID');
         }
 
@@ -291,7 +294,10 @@ class ShopifyOrdersService
     public static function markOrderAsPickedUp(string $fulfillmentOrderGid): void
     {
         $fulfillmentOrderGid = trim($fulfillmentOrderGid);
-        if ($fulfillmentOrderGid === '' || ! preg_match('#^gid://shopify/FulfillmentOrder/\d+$#', $fulfillmentOrderGid)) {
+        if (
+            $fulfillmentOrderGid === ''
+            || ! preg_match('#^gid://shopify/FulfillmentOrder/\d+$#', $fulfillmentOrderGid)
+        ) {
             throw new \InvalidArgumentException('Invalid fulfillment order GID');
         }
 
@@ -487,7 +493,7 @@ class ShopifyOrdersService
         foreach ($node['lineItems']['edges'] ?? [] as $liEdge) {
             $li = $liEdge['node'] ?? [];
             $committedQuantity = $committedByLineId[$li['id'] ?? ''] ?? 0;
-            // Old: $inventoryQuantity = $li['variant']['sellableOnlineQuantity'] ?? null;
+// Old: $inventoryQuantity = $li['variant']['sellableOnlineQuantity'] ?? null;
             $inventoryQuantity = $li['variant']['inventoryQuantity']
                 ?? $li['variant']['sellableOnlineQuantity']
                 ?? null;
@@ -636,7 +642,7 @@ class ShopifyOrdersService
                 return false;
             }
             $quantity = (int) ($item['quantity'] ?? 0);
-            /*
+/*
             Old logic counted committed quantity as available:
             $available = ! empty($item['custom_item'])
                 ? 0
