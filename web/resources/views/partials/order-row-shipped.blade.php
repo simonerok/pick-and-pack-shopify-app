@@ -64,6 +64,8 @@
                         View in Shopify
                     </a>
 
+                    {{--
+                    Old Webshipper action logic:
                     <a
                         x-show="order.webshipper && (order.webshipper.shipment_url || order.webshipper.order_url || (webshipperAccount && order.webshipper.order_id))"
                         :href="order.webshipper?.shipment_url || order.webshipper?.order_url || (webshipperAccount ? 'https://' + webshipperAccount + '.webshipper.io/ship/orders/' + order.webshipper?.order_id : '#')"
@@ -74,14 +76,38 @@
                     >
                         View in Webshipper
                     </a>
+                    --}}
+                    <a
+                        :href="order.webshipper?.shipment_url || order.webshipper?.order_url || (webshipperAccount && order.webshipper?.order_id ? 'https://' + webshipperAccount + '.webshipper.io/ship/orders/' + order.webshipper.order_id : '#')"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        @click="if (!(order.webshipper?.shipment_url || order.webshipper?.order_url || (webshipperAccount && order.webshipper?.order_id))) { $event.preventDefault(); return; } $dispatch('close'); logButtonClick('view-in-webshipper-shipped', { order_id: order.id, ws_order_id: order.webshipper?.order_id })"
+                        :aria-disabled="!(order.webshipper?.shipment_url || order.webshipper?.order_url || (webshipperAccount && order.webshipper?.order_id))"
+                        :title="(order.webshipper?.shipment_url || order.webshipper?.order_url || (webshipperAccount && order.webshipper?.order_id)) ? 'Open order in Webshipper' : 'No matching Webshipper order found'"
+                        :class="(order.webshipper?.shipment_url || order.webshipper?.order_url || (webshipperAccount && order.webshipper?.order_id)) ? 'block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out' : 'block w-full px-4 py-2 text-start text-sm leading-5 text-gray-400 cursor-not-allowed'"
+                    >
+                        View in Webshipper
+                    </a>
 
+                    {{--
+                    Old return label logic:
                     <a
                         href="#"
                         x-show="order.webshipper"
                         @click.prevent="if (!mutationsEnabled || returnLabelLoadingWsOrderId === order.webshipper?.order_id) return; $dispatch('close'); handleCreateReturnLabel(order.webshipper.order_id)"
                         :class="(!mutationsEnabled || returnLabelLoadingWsOrderId === order.webshipper?.order_id) ? 'block w-full px-4 py-2 text-start text-sm leading-5 text-gray-400 cursor-not-allowed' : 'block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out'"
                     >
-                        <span x-text="returnLabelLoadingWsOrderId === order.webshipper?.order_id ? 'Creating…' : 'Create return label'"></span>
+                        <span x-text="returnLabelLoadingWsOrderId === order.webshipper?.order_id ? 'Creating...' : 'Create return label'"></span>
+                    </a>
+                    --}}
+                    <a
+                        href="#"
+                        @click.prevent="if (!mutationsEnabled || !order.webshipper?.order_id || returnLabelLoadingWsOrderId === order.webshipper?.order_id) return; $dispatch('close'); handleCreateReturnLabel(order.webshipper.order_id)"
+                        :aria-disabled="!mutationsEnabled || !order.webshipper?.order_id || returnLabelLoadingWsOrderId === order.webshipper?.order_id"
+                        :title="!order.webshipper?.order_id ? 'No matching Webshipper order found' : (mutationsEnabled ? 'Create return label in Webshipper' : 'Test mode - set APP_STATUS=Production to enable')"
+                        :class="(!mutationsEnabled || !order.webshipper?.order_id || returnLabelLoadingWsOrderId === order.webshipper?.order_id) ? 'block w-full px-4 py-2 text-start text-sm leading-5 text-gray-400 cursor-not-allowed' : 'block w-full px-4 py-2 text-start text-sm leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out'"
+                    >
+                        <span x-text="returnLabelLoadingWsOrderId === order.webshipper?.order_id ? 'Creating...' : 'Create return label'"></span>
                     </a>
                 </x-slot>
             </x-dropdown>
