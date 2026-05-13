@@ -94,7 +94,7 @@
                         <a href="#"
                             x-show="order.delivery_method === 'Pickup' && order.shopify_order_status !== 'in_progress'"
                             @click.prevent="if (!mutationsEnabled) return; $dispatch('close'); readyOrderForPickup(order.fulfillment_orders?.[0]?.node?.id)"
-                            :title="Ready order for pickup"
+                            title="Ready order for pickup"
                             :class="(!mutationsEnabled) ? 'block w-full px-4 py-2 text-start text-xs leading-5 text-gray-400 cursor-not-allowed' : 'block w-full px-4 py-2 text-start text-xs leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out'">
                             Ready order for pickup
                         </a>
@@ -102,7 +102,7 @@
                         <a href="#"
                             x-show="order.delivery_method === 'Pickup' && order.shopify_order_status === 'in_progress'"
                             @click.prevent="if (!mutationsEnabled) return; $dispatch('close'); markOrderAsPickedUp(order.fulfillment_orders?.[0]?.node?.id)"
-                            :title="Mark order as picked up"
+                            title="Mark order as picked up"
                             :class="(!mutationsEnabled) ? 'block w-full px-4 py-2 text-start text-xs leading-5 text-gray-400 cursor-not-allowed' : 'block w-full px-4 py-2 text-start text-xs leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out'">
                             Mark as picked up
                         </a>
