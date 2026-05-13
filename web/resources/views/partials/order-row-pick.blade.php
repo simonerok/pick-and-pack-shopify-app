@@ -72,6 +72,8 @@
                             View in Shopify
                         </a>
 
+                        {{--
+                        Old Webshipper action logic:
                         <a
                             x-show="order.delivery_method !== 'Pickup' && order.webshipper && (order.webshipper.order_url || (webshipperAccount && order.webshipper.order_id))"
                             :href="order.webshipper?.order_url || (webshipperAccount && order.webshipper?.order_id ? 'https://' + webshipperAccount + '.webshipper.io/ship/orders/' + order.webshipper.order_id : '#')"
@@ -81,14 +83,38 @@
                             class="block w-full px-4 py-2 text-start text-xs leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out">
                             View in Webshipper
                         </a>
+                        --}}
+                        <a
+                            x-show="order.delivery_method !== 'Pickup'"
+                            :href="order.webshipper?.order_url || (webshipperAccount && order.webshipper?.order_id ? 'https://' + webshipperAccount + '.webshipper.io/ship/orders/' + order.webshipper.order_id : '#')"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            @click="if (!(order.webshipper?.order_url || (webshipperAccount && order.webshipper?.order_id))) { $event.preventDefault(); return; } $dispatch('close'); logButtonClick('view-in-webshipper-pick', { order_id: order.id, ws_order_id: order.webshipper?.order_id })"
+                            :aria-disabled="!(order.webshipper?.order_url || (webshipperAccount && order.webshipper?.order_id))"
+                            :title="(order.webshipper?.order_url || (webshipperAccount && order.webshipper?.order_id)) ? 'Open order in Webshipper' : 'No matching Webshipper order found'"
+                            :class="(order.webshipper?.order_url || (webshipperAccount && order.webshipper?.order_id)) ? 'block w-full px-4 py-2 text-start text-xs leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out' : 'block w-full px-4 py-2 text-start text-xs leading-5 text-gray-400 cursor-not-allowed'">
+                            View in Webshipper
+                        </a>
 
+                        {{--
+                        Old print label logic:
                         <a
                             href="#"
                             x-show="order.webshipper && order.delivery_method !== 'Pickup'"
                             @click.prevent="if (!mutationsEnabled || labelLoadingWsOrderId === order.webshipper?.order_id) return; $dispatch('close'); openPrintLabelConfirm(order.webshipper.order_id)"
-                            :title="mutationsEnabled ? 'Ship this order in Webshipper and print the label' : 'Test mode – set APP_STATUS=Production to enable'"
+                            :title="mutationsEnabled ? 'Ship this order in Webshipper and print the label' : 'Test mode - set APP_STATUS=Production to enable'"
                             :class="(!mutationsEnabled || labelLoadingWsOrderId === order.webshipper?.order_id) ? 'block w-full px-4 py-2 text-start text-xs leading-5 text-gray-400 cursor-not-allowed' : 'block w-full px-4 py-2 text-start text-xs leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out'">
-                            <span x-text="labelLoadingWsOrderId === order.webshipper?.order_id ? 'Loading…' : 'Print label'"></span>
+                            <span x-text="labelLoadingWsOrderId === order.webshipper?.order_id ? 'Loading...' : 'Print label'"></span>
+                        </a>
+                        --}}
+                        <a
+                            href="#"
+                            x-show="order.delivery_method !== 'Pickup'"
+                            @click.prevent="if (!mutationsEnabled || !order.webshipper?.order_id || labelLoadingWsOrderId === order.webshipper?.order_id) return; $dispatch('close'); openPrintLabelConfirm(order.webshipper.order_id)"
+                            :aria-disabled="!mutationsEnabled || !order.webshipper?.order_id || labelLoadingWsOrderId === order.webshipper?.order_id"
+                            :title="!order.webshipper?.order_id ? 'No matching Webshipper order found' : (mutationsEnabled ? 'Ship this order in Webshipper and print the label' : 'Test mode - set APP_STATUS=Production to enable')"
+                            :class="(!mutationsEnabled || !order.webshipper?.order_id || labelLoadingWsOrderId === order.webshipper?.order_id) ? 'block w-full px-4 py-2 text-start text-xs leading-5 text-gray-400 cursor-not-allowed' : 'block w-full px-4 py-2 text-start text-xs leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out'">
+                            <span x-text="labelLoadingWsOrderId === order.webshipper?.order_id ? 'Loading...' : 'Print label'"></span>
                         </a>
 
                         <a href="#"
@@ -179,10 +205,27 @@
                                                 <template x-if="item.gia_report">
                                                     <span class="text-slate-600" x-text="item.gia_report"></span>
                                                 </template>
+                                                {{--
+                                                Old BC action logic:
                                                 <template x-if="!item.gia_report && i === 0 && order.business_central">
                                                     <div class="flex flex-col gap-1.5 min-w-0">
                                                         <input type="text" x-model="giaInputByOrderId[order.id]" placeholder="GIA number" class="w-full min-w-0 px-2 py-1 text-[11px] border border-black rounded bg-transparent text-black focus:outline-none focus:ring-1 focus:ring-black/30" :disabled="giaLoadingOrderId === order.id">
                                                         <button type="button" @click="openGiaConfirm(order)" :disabled="!mutationsEnabled || giaLoadingOrderId === order.id || !(giaInputByOrderId[order.id] || '').trim()" class="inline-flex items-center justify-center gap-1 w-full min-w-0 px-2 py-1.5 rounded-md border border-black bg-transparent text-black text-xs font-medium hover:bg-black hover:text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+                                                            <span x-show="giaLoadingOrderId === order.id" class="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                                                            <span x-show="giaLoadingOrderId !== order.id">
+                                                                Add to BC
+                                                            </span>
+                                                        </button>
+                                                    </div>
+                                                </template>
+                                                <template x-if="!item.gia_report && !(i === 0 && order.business_central)">
+                                                    <span class="text-slate-500">&mdash;</span>
+                                                </template>
+                                                --}}
+                                                <template x-if="!item.gia_report && i === 0">
+                                                    <div class="flex flex-col gap-1.5 min-w-0">
+                                                        <input type="text" x-model="giaInputByOrderId[order.id]" placeholder="GIA number" class="w-full min-w-0 px-2 py-1 text-[11px] border border-black rounded bg-transparent text-black focus:outline-none focus:ring-1 focus:ring-black/30" :disabled="!order.business_central || giaLoadingOrderId === order.id" :title="order.business_central ? 'GIA number' : 'No matching Business Central order found'">
+                                                        <button type="button" @click="openGiaConfirm(order)" :disabled="!order.business_central || !mutationsEnabled || giaLoadingOrderId === order.id || !(giaInputByOrderId[order.id] || '').trim()" :title="!order.business_central ? 'No matching Business Central order found' : (mutationsEnabled ? 'Add GIA line to Business Central' : 'Test mode - set APP_STATUS=Production to enable')" class="inline-flex items-center justify-center gap-1 w-full min-w-0 px-2 py-1.5 rounded-md border border-black bg-transparent text-black text-xs font-medium hover:bg-black hover:text-white transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
                                                             <span x-show="giaLoadingOrderId === order.id" class="inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                                                             <span x-show="giaLoadingOrderId !== order.id">
                                                                 <!--<svg class="w-3.5 h-3.5 shrink-0 inline" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M12 5v14"/><path d="M5 12h14"/></svg>-->
@@ -191,7 +234,7 @@
                                                         </button>
                                                     </div>
                                                 </template>
-                                                <template x-if="!item.gia_report && !(i === 0 && order.business_central)">
+                                                <template x-if="!item.gia_report && i !== 0">
                                                     <span class="text-slate-500">&mdash;</span>
                                                 </template>
                                             </td>
