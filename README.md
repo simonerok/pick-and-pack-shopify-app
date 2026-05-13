@@ -304,11 +304,14 @@ The app runs in **test** or **production** mode based on `VITE_APP_STATUS` in `w
 - The API fetches open Shopify orders from the last 2 months, then filters to paid orders (`fetchOrdersReadyToPack`).
 - The result is enriched with Business Central + Webshipper data before it is returned to the UI.
 - Performance updates:
-  - Short-lived cache is used for expensive enrichment calls (BC sales orders, expected receipt map, BC shipment dates, Webshipper orders).
-  - Business Central purchase-order line fetches run in parallel chunks instead of one-by-one.
-  - Webshipper orders load page 1 first, then remaining pages in parallel when needed.
+    - Short-lived cache is used for expensive enrichment calls (BC sales orders, expected receipt map, BC shipment dates, Webshipper orders).
+    - Business Central purchase-order line fetches run in parallel chunks instead of one-by-one.
+    - Webshipper orders load page 1 first, then remaining pages in parallel when needed.
 
 ## Laravel Horizon
+
+USE THIS TO START THE HORIZON SERVER:
+php artisan queue:work redis --queue=default --tries=3 --timeout=120
 
 - **What it is:** Queue dashboard for Redis; shows pending, completed, and failed jobs.
 - **URL:** `/horizon`. You must be logged in.
