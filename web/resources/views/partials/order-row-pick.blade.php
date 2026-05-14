@@ -11,12 +11,17 @@
             <div class="flex flex-col gap-0.5">
                 <div class="text-slate-500 text-[11px]" x-text="formatDate(order.created_at)"></div>
                 <span class="font-medium text-slate-800" x-text="order.name"></span>
+                {{--
+                Old integration labels only appeared when matched external data existed.
                 <template x-if="order.business_central">
                     <span class="text-slate-600 font-normal" :title="'BC sales order: ' + (order.business_central?.number || '')" x-text="'BC: ' + (order.business_central?.number || '')"></span>
                 </template>
                 <template x-if="order.webshipper">
                     <span class="text-slate-600 font-normal" :title="(order.webshipper?.tracking_numbers?.length > 0 ? 'Tracking: ' + (order.webshipper.tracking_numbers.join(', ')) : 'Webshipper order #' + order.webshipper?.order_id)" x-text="'WS: ' + (order.webshipper?.status || ('#' + order.webshipper?.order_id)) + (order.webshipper?.tracking_numbers?.length > 0 ? ' (' + order.webshipper.tracking_numbers.length + ' tracking)' : '')"></span>
                 </template>
+                --}}
+                <span class="text-slate-600 font-normal" :title="order.business_central ? ('BC sales order: ' + (order.business_central?.number || '')) : 'Placeholder for Business Central number'" x-text="order.business_central ? ('BC: ' + (order.business_central?.number || '')) : 'BC: number from BC'"></span>
+                <span class="text-slate-600 font-normal" :title="order.webshipper ? (order.webshipper?.tracking_numbers?.length > 0 ? 'Tracking: ' + (order.webshipper.tracking_numbers.join(', ')) : 'Webshipper order #' + order.webshipper?.order_id) : 'Placeholder for Webshipper number'" x-text="order.webshipper ? ('WS: ' + (order.webshipper?.status || ('#' + order.webshipper?.order_id)) + (order.webshipper?.tracking_numbers?.length > 0 ? ' (' + order.webshipper.tracking_numbers.length + ' tracking)' : '')) : 'WS: number from Webshipper'"></span>
             </div>
         </td>
         <td class="px-4 py-2 text-xs" data-label="Gift">
