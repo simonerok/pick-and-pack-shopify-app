@@ -10,6 +10,11 @@
     <div class="flex justify-center mb-6">
         <p class="text-slate-500 text-xs mb-4" x-text="activeTab === 'ready-to-pack' ? 'Paid open orders ready to be packed.' : activeTab === 'ready-for-pickup' ? 'Open orders ready for pickup.' : activeTab === 'on-hold' ? 'Orders tagged with On-hold.' : activeTab === 'upcoming' ? 'Open not-paid orders and not fully available orders.' : 'Closed/archived orders from the last 2 months in Shopify.'"></p>
     </div>
+    <div class="flex justify-center mb-4">
+        <p class="text-slate-500 text-xs text-center">
+            Shopify orders come from the connected development store. BC and Webshipper values marked placeholder are test data references.
+        </p>
+    </div>
     <div class="flex gap-6 mb-4 border-b border-slate-200">
         {{-- Pick & Pack tab deactivated; restore button to re-enable --}}
         {{--
