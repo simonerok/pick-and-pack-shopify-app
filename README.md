@@ -274,6 +274,25 @@ The main dashboard shows orders in a single view. Data is combined from three so
 
 Users can switch between **pick & pack** and **shipping** views. If a source is not configured in `.env`, that data is omitted or disabled in the UI.
 
+### Demo data and placeholder integration values
+
+For the bachelor/demo setup, Shopify orders are loaded from the connected Shopify development store. This means orders shown in the UI are Shopify development-store records, even when they were created by the seed scripts.
+
+Business Central and Webshipper data may be missing in the demo setup. When no live external record is linked, the UI shows short placeholder references such as:
+
+- `BC: number from BC (placeholder)`
+- `WS: number from Webshipper (placeholder)`
+
+These placeholder labels are only UI references. They do not mean that live Business Central or Webshipper data was loaded.
+
+External order enrichment is disabled by default to keep the demo stable and avoid slow loading when BC/Webshipper data is unavailable:
+
+```env
+SHOPIFY_ORDERS_LOAD_EXTERNAL_DATA=false
+```
+
+Set it to `true` only when real Business Central/Webshipper credentials are configured and live integration data should be loaded. Write/create behavior is described separately in [Test mode](#test-mode).
+
 ### Test mode
 
 The app runs in **test** or **production** mode based on `VITE_APP_STATUS` in `web/.env`:
