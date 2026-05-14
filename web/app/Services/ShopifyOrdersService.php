@@ -66,6 +66,18 @@ class ShopifyOrdersService
                     $fulfillmentStatusesForOpen
                 ))));
 
+        if (
+            ! $archived
+            && ! $ignoreFinancialFilterForOpen
+            && is_array($allowedFinancialStatuses)
+            && count($allowedFinancialStatuses) === 1
+        ) {
+            $searchFinancialStatus = self::shopifyFinancialStatusSearchValue($allowedFinancialStatuses[0]);
+            if ($searchFinancialStatus !== null) {
+                $orderQuery .= ' AND financial_status:' . $searchFinancialStatus;
+            }
+        }
+
         do {
             $variables = ['first' => $first, 'query' => $orderQuery];
             if ($cursor !== null) {
@@ -610,6 +622,19 @@ class ShopifyOrdersService
         $value = trim($value, '_');
 
         return $value === '' ? null : $value;
+    }
+
+    private static function shopifyFinancialStatusSearchValue(?string $status): ?string
+    {
+        return match ($status) {
+            'authorized',
+            'paid',
+            'partially_paid',
+            'pending',
+            'refunded',
+            'voided' => $status,
+            default => null,
+        };
     }
 
     private static function orderHasOnHoldTag(array $order): bool
