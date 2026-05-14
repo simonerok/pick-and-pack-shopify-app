@@ -28,7 +28,17 @@ class WebshipperLabelController extends Controller
             ], 400);
         }
 
-        $result = WebshipperService::getLabelPdfForOrder($orderId);
+        try {
+            $result = WebshipperService::getLabelPdfForOrder($orderId);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'ok' => false,
+                'error' => 'The shipping label could not be loaded right now. Please try again.',
+            ], 502);
+        }
+
         if (! ($result['ok'] ?? false)) {
             $errorMessage = $result['error'] ?? 'Unknown error';
             $status = self::httpStatusForWebshipperError($errorMessage);
@@ -48,7 +58,7 @@ class WebshipperLabelController extends Controller
 
             return response()->json([
                 'ok' => false,
-                'error' => $errorMessage,
+                'error' => self::userMessageForWebshipperError($errorMessage),
             ], $status);
         }
 
@@ -83,5 +93,21 @@ class WebshipperLabelController extends Controller
         }
 
         return 400;
+    }
+
+    private static function userMessageForWebshipperError(string $errorMessage): string
+    {
+        $message = strtolower($errorMessage);
+
+        if (str_contains($message, '403') || str_contains($message, '401') || str_contains($message, 'scope')) {
+            return 'The app is missing Webshipper permissions needed to create labels. '
+                . 'Check Webshipper access, then try again.';
+        }
+
+        if (str_contains($message, 'not available') || str_contains($message, 'not yet')) {
+            return 'The shipping label is not ready yet. Please try again in a moment.';
+        }
+
+        return 'The shipping label could not be loaded right now. Please try again.';
     }
 }

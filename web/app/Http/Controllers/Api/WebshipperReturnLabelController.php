@@ -29,7 +29,17 @@ class WebshipperReturnLabelController extends Controller
             ], 400);
         }
 
-        $result = WebshipperService::getReturnLabelPdfForOrder($orderId);
+        try {
+            $result = WebshipperService::getReturnLabelPdfForOrder($orderId);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response()->json([
+                'ok' => false,
+                'error' => 'The return label could not be created right now. Please try again.',
+            ], 502);
+        }
+
         if (! ($result['ok'] ?? false)) {
             $err = $result['error'] ?? '';
             $status = (str_contains($err, 'failed') || str_contains($err, 'not yet')) ? 502 : 400;
@@ -51,7 +61,7 @@ class WebshipperReturnLabelController extends Controller
 
             return response()->json([
                 'ok' => false,
-                'error' => $errorMessage,
+                'error' => self::userMessageForWebshipperError($errorMessage),
             ], $status);
         }
         // logging activity for return label generation
@@ -67,5 +77,21 @@ class WebshipperReturnLabelController extends Controller
             ->log('Return label generated, for Webshipper order id: ' . $orderId);
 
         return response()->json(['ok' => true, 'pdfBase64' => $result['pdfBase64']]);
+    }
+
+    private static function userMessageForWebshipperError(string $errorMessage): string
+    {
+        $message = strtolower($errorMessage);
+
+        if (str_contains($message, '403') || str_contains($message, '401') || str_contains($message, 'scope')) {
+            return 'The app is missing Webshipper permissions needed to create return labels. '
+                . 'Check Webshipper access, then try again.';
+        }
+
+        if (str_contains($message, 'not available') || str_contains($message, 'not yet')) {
+            return 'The return label is not ready yet. Please try again in a moment.';
+        }
+
+        return 'The return label could not be created right now. Please try again.';
     }
 }
