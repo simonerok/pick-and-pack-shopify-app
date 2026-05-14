@@ -123,7 +123,9 @@ class ShopifyOrdersService
             $cursor = $pageInfo['endCursor'] ?? null;
         } while ($hasNext && $cursor);
 
-        if (BusinessCentralService::isConfigured()) {
+        $loadExternalOrderData = self::shouldLoadExternalOrderData();
+
+        if ($loadExternalOrderData && BusinessCentralService::isConfigured()) {
             try {
                 self::enrichWithBusinessCentral($allOrders);
             } catch (\Throwable $e) {
@@ -131,7 +133,7 @@ class ShopifyOrdersService
             }
         }
 
-        if (WebshipperService::isConfigured()) {
+        if ($loadExternalOrderData && WebshipperService::isConfigured()) {
             try {
                 self::enrichWithWebshipper($allOrders);
             } catch (\Throwable $e) {
@@ -721,6 +723,11 @@ class ShopifyOrdersService
         $s = preg_replace('/^\s*#\s*/', '', $s);
 
         return trim($s);
+    }
+
+    private static function shouldLoadExternalOrderData(): bool
+    {
+        return filter_var(env('SHOPIFY_ORDERS_LOAD_EXTERNAL_DATA', false), FILTER_VALIDATE_BOOLEAN);
     }
 
     private static function enrichWithBusinessCentral(array &$allOrders): void
