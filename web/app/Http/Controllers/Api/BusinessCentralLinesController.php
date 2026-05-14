@@ -64,10 +64,23 @@ class BusinessCentralLinesController extends Controller
 
             return response()->json(['ok' => true]);
         } catch (\Throwable $err) {
+            report($err);
+
             return response()->json([
                 'ok' => false,
-                'error' => $err->getMessage(),
+                'error' => self::userMessageForBusinessCentralError($err->getMessage()),
             ], 500);
         }
+    }
+
+    private static function userMessageForBusinessCentralError(string $errorMessage): string
+    {
+        $message = strtolower($errorMessage);
+
+        if (str_contains($message, '401') || str_contains($message, '403') || str_contains($message, 'token')) {
+            return 'Business Central access is not working. Check the integration credentials, then try again.';
+        }
+
+        return 'Business Central could not be updated right now. Please try again.';
     }
 }
