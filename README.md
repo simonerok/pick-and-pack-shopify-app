@@ -293,6 +293,12 @@ SHOPIFY_ORDERS_LOAD_EXTERNAL_DATA=false
 
 Set it to `true` only when real Business Central/Webshipper credentials are configured and live integration data should be loaded. Write/create behavior is described separately in [Test mode](#test-mode).
 
+### User-facing error messages
+
+The order UI should not show raw technical errors such as GraphQL messages, API response bodies, or permission stack details. API endpoints map these failures to short user-facing messages, for example missing Shopify permissions or data that could not be loaded.
+
+The original technical exception is still kept for debugging through Laravel logs, Telescope, and activity logs where relevant.
+
 ### Test mode
 
 The app runs in **test** or **production** mode based on `VITE_APP_STATUS` in `web/.env`:
