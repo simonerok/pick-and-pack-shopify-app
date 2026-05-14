@@ -588,7 +588,7 @@
                             }
                         });
                         const data = await this.parseJsonResponse(res);
-                        if (!res.ok) throw new Error(data.detail || data.error || 'Failed to load orders');
+                        if (!res.ok) throw new Error(data.error || 'Failed to load orders');
                         this.orders = data.orders ?? [];
                         this.shopDomain = data.shop_domain ?? null;
                         this.webshipperAccount = data.webshipper_account ?? null;
@@ -619,7 +619,7 @@
                         }
                     });
                     const data = await this.parseJsonResponse(res);
-                    if (!res.ok) throw new Error(data.detail || data.error || 'Failed to load archived orders');
+                    if (!res.ok) throw new Error(data.error || 'Failed to load archived orders');
                     this.shippedOrders = data.orders ?? [];
                 } catch (err) {
                     this.shippedError = err?.message ?? 'Failed to load archived orders';
@@ -641,7 +641,7 @@
                         }
                     });
                     const data = await this.parseJsonResponse(res);
-                    if (!res.ok) throw new Error(data.detail || data.error || 'Failed to load ready-to-pack orders');
+                    if (!res.ok) throw new Error(data.error || 'Failed to load ready-to-pack orders');
                     this.readyToPackOrders = data.orders ?? [];
                     if (data.shop_domain) this.shopDomain = data.shop_domain;
                     if (data.webshipper_account !== undefined) this.webshipperAccount = data.webshipper_account;
@@ -668,7 +668,7 @@
                         }
                     });
                     const data = await this.parseJsonResponse(res);
-                    if (!res.ok) throw new Error(data.detail || data.error || 'Failed to load ready for pickup orders');
+                    if (!res.ok) throw new Error(data.error || 'Failed to load ready for pickup orders');
                     this.readyForPickupOrders = data.orders ?? [];
                     if (data.shop_domain) this.shopDomain = data.shop_domain;
                     if (data.webshipper_account !== undefined) this.webshipperAccount = data.webshipper_account;
@@ -695,7 +695,7 @@
                         }
                     });
                     const data = await this.parseJsonResponse(res);
-                    if (!res.ok) throw new Error(data.detail || data.error || 'Failed to load on hold orders');
+                    if (!res.ok) throw new Error(data.error || 'Failed to load on hold orders');
                     this.onHoldOrders = data.orders ?? [];
                     if (data.shop_domain) this.shopDomain = data.shop_domain;
                     if (data.webshipper_account !== undefined) this.webshipperAccount = data.webshipper_account;
@@ -856,7 +856,7 @@
                         }
                     });
                     const data = await this.parseJsonResponse(res);
-                    if (!res.ok) throw new Error(data.detail || data.error || 'Failed to load upcoming orders');
+                    if (!res.ok) throw new Error(data.error || 'Failed to load upcoming orders');
                     this.upcomingOrders = data.orders ?? [];
                     if (data.shop_domain) this.shopDomain = data.shop_domain;
                     if (data.webshipper_account !== undefined) this.webshipperAccount = data.webshipper_account;
