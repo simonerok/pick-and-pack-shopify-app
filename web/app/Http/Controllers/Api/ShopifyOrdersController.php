@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\ShopifyOrdersService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Throwable;
 
 class ShopifyOrdersController extends Controller
 {
@@ -29,11 +30,13 @@ class ShopifyOrdersController extends Controller
             }
 
             return response()->json($data);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'error' => 'Failed to fetch orders',
-                'detail' => $e->getMessage(),
-            ], 500);
+        } catch (Throwable $e) {
+            return self::errorResponse(
+                $e,
+                'orders',
+                'Order data could not be loaded right now. Please refresh and try again.',
+                500
+            );
         }
     }
 
@@ -43,11 +46,13 @@ class ShopifyOrdersController extends Controller
             ShopifyOrdersService::addOnHoldTagToOrder($orderId);
 
             return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'ok' => false,
-                'error' => $e->getMessage(),
-            ], 422);
+        } catch (Throwable $e) {
+            return self::errorResponse(
+                $e,
+                'shopify_tag',
+                'The Shopify order tag could not be updated. Please refresh and try again.',
+                422
+            );
         }
     }
 
@@ -57,11 +62,13 @@ class ShopifyOrdersController extends Controller
             ShopifyOrdersService::removeOnHoldTagFromOrder($orderId);
 
             return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'ok' => false,
-                'error' => $e->getMessage(),
-            ], 422);
+        } catch (Throwable $e) {
+            return self::errorResponse(
+                $e,
+                'shopify_tag',
+                'The Shopify order tag could not be updated. Please refresh and try again.',
+                422
+            );
         }
     }
 
@@ -73,11 +80,13 @@ class ShopifyOrdersController extends Controller
         try {
             ShopifyOrdersService::readyOrderForPickup((string) $request->input('fulfillment_order_id'));
             return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'ok' => false,
-                'error' => $e->getMessage(),
-            ], 422);
+        } catch (Throwable $e) {
+            return self::errorResponse(
+                $e,
+                'shopify_fulfillment',
+                'The pickup status could not be updated. Please check the app permissions and try again.',
+                422
+            );
         }
     }
 
@@ -89,11 +98,61 @@ class ShopifyOrdersController extends Controller
         try {
             ShopifyOrdersService::markOrderAsPickedUp((string) $request->input('fulfillment_order_id'));
             return response()->json(['ok' => true]);
-        } catch (\Throwable $e) {
-            return response()->json([
-                'ok' => false,
-                'error' => $e->getMessage(),
-            ], 422);
+        } catch (Throwable $e) {
+            return self::errorResponse(
+                $e,
+                'shopify_fulfillment',
+                'The pickup status could not be updated. Please check the app permissions and try again.',
+                422
+            );
         }
+    }
+
+    private static function errorResponse(
+        Throwable $exception,
+        string $context,
+        string $fallbackMessage,
+        int $status
+    ): JsonResponse {
+        report($exception);
+
+        return response()->json([
+            'ok' => false,
+            'error' => self::userMessageForException($exception, $context, $fallbackMessage),
+        ], $status);
+    }
+
+    private static function userMessageForException(
+        Throwable $exception,
+        string $context,
+        string $fallbackMessage
+    ): string {
+        $message = strtolower($exception->getMessage());
+        $isPermissionError = str_contains($message, 'access denied')
+            || str_contains($message, 'permission')
+            || str_contains($message, 'scope')
+            || str_contains($message, '403');
+
+        if ($isPermissionError) {
+            if (str_contains($message, 'fulfillment')) {
+                return 'The app is missing Shopify permissions for fulfillment data. '
+                    . 'Reinstall the app with the updated permissions, then try again.';
+            }
+
+            return 'The app is missing a Shopify permission. Check the app permissions, then try again.';
+        }
+
+        if (
+            str_contains($message, 'graphql error')
+            || str_contains($message, 'shopify api error')
+            || str_contains($message, 'timeout')
+            || str_contains($message, 'timed out')
+        ) {
+            return $context === 'orders'
+                ? 'Order data could not be loaded from Shopify right now. Please refresh and try again.'
+                : $fallbackMessage;
+        }
+
+        return $fallbackMessage;
     }
 }
