@@ -46,7 +46,7 @@
             <span class="inline-flex px-2 py-0.5 rounded text-[11px] font-medium" :class="order.financial_status === 'paid' ? 'bg-emerald-100 text-emerald-800' : order.financial_status === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'" x-text="order.financial_status"></span>
         </td>
         <td class="px-4 py-2" data-label="Fulfillment">
-            <span class="inline-flex px-2 py-0.5 rounded text-[11px] font-medium" :class="order.fulfillment_status === 'fulfilled' ? 'bg-emerald-100 text-emerald-800' : order.fulfillment_status === 'partial' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600'" x-text="order.fulfillment_status || '—'"></span>
+            <span class="inline-flex px-2 py-0.5 rounded text-[11px] font-medium" :class="order.fulfillment_status === 'fulfilled' ? 'bg-emerald-100 text-emerald-800' : order.fulfillment_status === 'partial' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600'" x-text="order.fulfillment_status || 'Fulfillment data unavailable'"></span>
         </td>
         <td class="px-4 py-2 text-slate-600 text-xs" data-label="Availability">
             <span x-show="isAllProductsAvailable(order)" class="text-emerald-700">All products available</span>
@@ -121,6 +121,12 @@
                             :class="(!mutationsEnabled || !order.webshipper?.order_id || labelLoadingWsOrderId === order.webshipper?.order_id) ? 'block w-full px-4 py-2 text-start text-xs leading-5 text-gray-400 cursor-not-allowed' : 'block w-full px-4 py-2 text-start text-xs leading-5 text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 transition duration-150 ease-in-out'">
                             <span x-text="labelLoadingWsOrderId === order.webshipper?.order_id ? 'Loading...' : 'Print label'"></span>
                         </a>
+                        <p
+                            x-show="order.delivery_method !== 'Pickup' && !order.webshipper?.order_id"
+                            class="px-4 py-2 text-[11px] leading-4 text-slate-500 border-t border-slate-100"
+                        >
+                            This action is disabled because no live Webshipper order is linked.
+                        </p>
 
                         <a href="#"
                             x-show="order.delivery_method === 'Pickup' && order.shopify_order_status !== 'in_progress'"
