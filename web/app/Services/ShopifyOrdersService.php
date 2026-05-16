@@ -49,6 +49,9 @@ class ShopifyOrdersService
         $allOrders = [];
         $cursor = null;
         $first = 50;
+        $queryDocument = GraphQLHelper::ORDERS_QUERY;
+        $retriedWithoutFulfillmentOrders = false;
+        $shopifyStatusOverrides = [];
         $allowedFinancialStatuses = $archived
             ? null
             : ($financialStatusesForOpen === null
@@ -84,23 +87,44 @@ class ShopifyOrdersService
                 $variables['after'] = $cursor;
             }
 
-            $response = Http::timeout(90)->withHeaders([
-                'X-Shopify-Access-Token' => $token,
-                'Content-Type' => 'application/json',
-            ])->post($url, [
-                'query' => GraphQLHelper::ORDERS_QUERY,
-                'variables' => $variables,
-            ]);
+            while (true) {
+                $response = Http::timeout(90)->withHeaders([
+                    'X-Shopify-Access-Token' => $token,
+                    'Content-Type' => 'application/json',
+                ])->post($url, [
+                    'query' => $queryDocument,
+                    'variables' => $variables,
+                ]);
 
-            if (! $response->successful()) {
-                throw new \RuntimeException('Shopify API error: ' . $response->body());
-            }
+                if (! $response->successful()) {
+                    $message = 'Shopify API error: ' . $response->body();
+                    if (! $retriedWithoutFulfillmentOrders && self::isFulfillmentOrdersError([$message])) {
+                        $retriedWithoutFulfillmentOrders = true;
+                        $queryDocument = self::ordersQueryWithoutFulfillmentOrders();
+                        $shopifyStatusOverrides['shopify_fulfillment'] = self::fulfillmentFallbackStatus($message);
+                        self::logFulfillmentOrdersFallback($message);
+                        continue;
+                    }
 
-            $json = $response->json();
-            if (! empty($json['errors'])) {
-                $messages = array_map(fn($e) => $e['message'] ?? '', $json['errors']);
+                    throw new \RuntimeException($message);
+                }
 
-                throw new \RuntimeException('GraphQL error: ' . implode('; ', $messages));
+                $json = $response->json();
+                if (! empty($json['errors'])) {
+                    $messages = self::graphQlErrorMessages($json['errors']);
+                    $message = 'GraphQL error: ' . implode('; ', $messages);
+                    if (! $retriedWithoutFulfillmentOrders && self::isFulfillmentOrdersError($messages)) {
+                        $retriedWithoutFulfillmentOrders = true;
+                        $queryDocument = self::ordersQueryWithoutFulfillmentOrders();
+                        $shopifyStatusOverrides['shopify_fulfillment'] = self::fulfillmentFallbackStatus($message);
+                        self::logFulfillmentOrdersFallback($message);
+                        continue;
+                    }
+
+                    throw new \RuntimeException($message);
+                }
+
+                break;
             }
 
             $ordersConnection = $json['data']['orders'] ?? null;
@@ -136,7 +160,7 @@ class ShopifyOrdersService
         } while ($hasNext && $cursor);
 
         $loadExternalOrderData = self::shouldLoadExternalOrderData();
-        $integrationStatus = self::integrationStatus($loadExternalOrderData);
+        $integrationStatus = self::integrationStatus($loadExternalOrderData, $shopifyStatusOverrides);
 
         if ($loadExternalOrderData && BusinessCentralService::isConfigured()) {
             try {
@@ -775,7 +799,78 @@ class ShopifyOrdersService
         return filter_var(env('SHOPIFY_ORDERS_LOAD_EXTERNAL_DATA', false), FILTER_VALIDATE_BOOLEAN);
     }
 
-    private static function integrationStatus(bool $loadExternalOrderData): array
+    private static function graphQlErrorMessages(array $errors): array
+    {
+        return array_values(array_filter(array_map(
+            static fn($error) => is_array($error) ? (string) ($error['message'] ?? '') : '',
+            $errors
+        )));
+    }
+
+    private static function isFulfillmentOrdersError(array $messages): bool
+    {
+        $text = strtolower(implode(' ', $messages));
+
+        return str_contains($text, 'fulfillmentorders')
+            || str_contains($text, 'fulfillment orders')
+            || str_contains($text, 'fulfillment_orders');
+    }
+
+    private static function fulfillmentFallbackStatus(string $technicalMessage): array
+    {
+        $message = self::isPermissionErrorMessage($technicalMessage)
+            ? 'The app is missing Shopify permissions for fulfillment data. Orders are still shown.'
+            : 'Shopify fulfillment data could not be loaded. Orders are still shown.';
+
+        return self::integrationSourceStatus('failed', $message);
+    }
+
+    private static function isPermissionErrorMessage(string $message): bool
+    {
+        $text = strtolower($message);
+
+        return str_contains($text, 'access denied')
+            || str_contains($text, 'permission')
+            || str_contains($text, 'scope')
+            || str_contains($text, '403');
+    }
+
+    private static function logFulfillmentOrdersFallback(string $technicalMessage): void
+    {
+        Log::warning('Shopify fulfillment data fallback: ' . $technicalMessage);
+        report(new \RuntimeException('Shopify fulfillment data fallback: ' . $technicalMessage));
+    }
+
+    private static function ordersQueryWithoutFulfillmentOrders(): string
+    {
+        $fulfillmentOrdersBlock = <<<'GQL'
+        fulfillmentOrders(first: 10) {
+          edges {
+            node {
+              id
+              status
+              deliveryMethod {
+                methodType
+              }
+              lineItems(first: 25) {
+                edges {
+                  node {
+                    lineItem {
+                      id
+                    }
+                    totalQuantity
+                  }
+                }
+              }
+            }
+          }
+        }
+GQL;
+
+        return str_replace($fulfillmentOrdersBlock, '', GraphQLHelper::ORDERS_QUERY);
+    }
+
+    private static function integrationStatus(bool $loadExternalOrderData, array $shopifyStatusOverrides = []): array
     {
         $businessCentralStatus = self::integrationSourceStatus(
             'disabled',
@@ -804,10 +899,10 @@ class ShopifyOrdersService
         return [
             'shopify' => self::integrationSourceStatus('loaded', 'Shopify order data loaded.'),
             'external_data_enabled' => $loadExternalOrderData,
-            'sources' => [
+            'sources' => array_merge([
                 'business_central' => $businessCentralStatus,
                 'webshipper' => $webshipperStatus,
-            ],
+            ], $shopifyStatusOverrides),
         ];
     }
 
