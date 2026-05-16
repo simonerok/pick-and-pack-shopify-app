@@ -136,20 +136,39 @@ class ShopifyOrdersService
         } while ($hasNext && $cursor);
 
         $loadExternalOrderData = self::shouldLoadExternalOrderData();
+        $integrationStatus = self::integrationStatus($loadExternalOrderData);
 
         if ($loadExternalOrderData && BusinessCentralService::isConfigured()) {
             try {
                 self::enrichWithBusinessCentral($allOrders);
+                $integrationStatus['sources']['business_central'] = self::integrationSourceStatus(
+                    'loaded',
+                    'Business Central data loaded.'
+                );
             } catch (\Throwable $e) {
+                report($e);
                 Log::error('Business Central fetch failed: ' . $e->getMessage());
+                $integrationStatus['sources']['business_central'] = self::integrationSourceStatus(
+                    'failed',
+                    'Business Central data could not be loaded. Shopify orders are still shown.'
+                );
             }
         }
 
         if ($loadExternalOrderData && WebshipperService::isConfigured()) {
             try {
                 self::enrichWithWebshipper($allOrders);
+                $integrationStatus['sources']['webshipper'] = self::integrationSourceStatus(
+                    'loaded',
+                    'Webshipper data loaded.'
+                );
             } catch (\Throwable $e) {
+                report($e);
                 Log::error('Webshipper fetch failed: ' . $e->getMessage());
+                $integrationStatus['sources']['webshipper'] = self::integrationSourceStatus(
+                    'failed',
+                    'Webshipper data could not be loaded. Shopify orders are still shown.'
+                );
             }
         }
 
@@ -164,6 +183,7 @@ class ShopifyOrdersService
             'shop_domain' => $shopDomain,
             'webshipper_account' => $webshipperAccount,
             'VITE_APP_STATUS' => AppStatus::get(),
+            'integration_status' => $integrationStatus,
         ];
     }
 
@@ -753,6 +773,50 @@ class ShopifyOrdersService
     private static function shouldLoadExternalOrderData(): bool
     {
         return filter_var(env('SHOPIFY_ORDERS_LOAD_EXTERNAL_DATA', false), FILTER_VALIDATE_BOOLEAN);
+    }
+
+    private static function integrationStatus(bool $loadExternalOrderData): array
+    {
+        $businessCentralStatus = self::integrationSourceStatus(
+            'disabled',
+            'Business Central data is not loaded in demo mode. Shopify orders are still shown.'
+        );
+        $webshipperStatus = self::integrationSourceStatus(
+            'disabled',
+            'Webshipper data is not loaded in demo mode. Shopify orders are still shown.'
+        );
+
+        if ($loadExternalOrderData) {
+            $businessCentralStatus = BusinessCentralService::isConfigured()
+                ? self::integrationSourceStatus('pending', 'Business Central data is being checked.')
+                : self::integrationSourceStatus(
+                    'not_configured',
+                    'Business Central is not configured. Shopify orders are still shown.'
+                );
+            $webshipperStatus = WebshipperService::isConfigured()
+                ? self::integrationSourceStatus('pending', 'Webshipper data is being checked.')
+                : self::integrationSourceStatus(
+                    'not_configured',
+                    'Webshipper is not configured. Shopify orders are still shown.'
+                );
+        }
+
+        return [
+            'shopify' => self::integrationSourceStatus('loaded', 'Shopify order data loaded.'),
+            'external_data_enabled' => $loadExternalOrderData,
+            'sources' => [
+                'business_central' => $businessCentralStatus,
+                'webshipper' => $webshipperStatus,
+            ],
+        ];
+    }
+
+    private static function integrationSourceStatus(string $status, string $message): array
+    {
+        return [
+            'status' => $status,
+            'message' => $message,
+        ];
     }
 
     private static function enrichWithBusinessCentral(array &$allOrders): void
