@@ -176,6 +176,13 @@
         </div>
     </div>
 
+    <p
+        x-cloak
+        x-show="ordersPageFooterNote"
+        class="mt-6 text-center text-xs text-slate-500"
+        x-text="ordersPageFooterNote"
+    ></p>
+
     @include('partials.modal-print-label')
     @include('partials.modal-gia')
 </main>
@@ -204,6 +211,7 @@
             upcomingError: null,
             shopDomain: null,
             webshipperAccount: null,
+            integrationStatus: null,
             appStatus: 'test',
             _initStarted: false,
             loading: true,
@@ -447,6 +455,41 @@
                 return this.appStatus === 'production';
             },
 
+            get integrationStatusNotice() {
+                const sources = this.integrationStatus?.sources || {};
+                const businessCentralStatus = sources.business_central?.status || null;
+                const webshipperStatus = sources.webshipper?.status || null;
+
+                if (businessCentralStatus === 'disabled' && webshipperStatus === 'disabled') {
+                    return 'BC and Webshipper data are shown as test data and placeholders.';
+                }
+
+                if (businessCentralStatus === 'not_configured' && webshipperStatus === 'not_configured') {
+                    return 'BC and Webshipper are not configured. Shopify orders are still shown.';
+                }
+
+                if (businessCentralStatus === 'failed' && webshipperStatus === 'failed') {
+                    return 'BC and Webshipper data could not be loaded. Shopify orders are still shown.';
+                }
+
+                const messages = Object.entries(sources)
+                    .filter((source) =>
+                        source[1] &&
+                        source[1].message &&
+                        source[1].status !== 'loaded' &&
+                        source[1].status !== 'pending'
+                    )
+                    .map((source) => source[1].message);
+
+                return [...new Set(messages)].join(' ');
+            },
+
+            get ordersPageFooterNote() {
+                return this.integrationStatusNotice ?
+                    'Integration status: ' + this.integrationStatusNotice :
+                    'Shopify orders come from the connected development store.';
+            },
+
             toggleExpanded(id) {
                 const key = String(id);
                 const now = Date.now();
@@ -572,6 +615,23 @@
                 }
             },
 
+            applyOrderResponseMetadata(data) {
+                if (data.shop_domain) this.shopDomain = data.shop_domain;
+                if (data.webshipper_account !== undefined) {
+                    this.webshipperAccount = data.webshipper_account;
+                }
+                if (data.VITE_APP_STATUS !== undefined) {
+                    this.appStatus = data.VITE_APP_STATUS === 'production' ? 'production' : 'test';
+                }
+                if (data.integration_status !== undefined) {
+                    this.integrationStatus = data.integration_status;
+                }
+            },
+
+            clearIntegrationStatus() {
+                this.integrationStatus = null;
+            },
+
             async init() {
                 if (this._initStarted) {
                     return;
@@ -590,9 +650,7 @@
                         const data = await this.parseJsonResponse(res);
                         if (!res.ok) throw new Error(data.error || 'Failed to load orders');
                         this.orders = data.orders ?? [];
-                        this.shopDomain = data.shop_domain ?? null;
-                        this.webshipperAccount = data.webshipper_account ?? null;
-                        this.appStatus = data.VITE_APP_STATUS === 'production' ? 'production' : 'test';
+                        this.applyOrderResponseMetadata(data);
                         this.error = null;
                     } else {
                         this.orders = [];
@@ -600,6 +658,7 @@
                     }
                 } catch (err) {
                     this.error = err?.message ?? 'Failed to load orders';
+                    this.clearIntegrationStatus();
                     this.orders = [];
                 } finally {
                     this.loading = false;
@@ -621,8 +680,10 @@
                     const data = await this.parseJsonResponse(res);
                     if (!res.ok) throw new Error(data.error || 'Failed to load archived orders');
                     this.shippedOrders = data.orders ?? [];
+                    this.applyOrderResponseMetadata(data);
                 } catch (err) {
                     this.shippedError = err?.message ?? 'Failed to load archived orders';
+                    this.clearIntegrationStatus();
                     this.shippedOrders = [];
                 } finally {
                     this.shippedLoading = false;
@@ -643,13 +704,10 @@
                     const data = await this.parseJsonResponse(res);
                     if (!res.ok) throw new Error(data.error || 'Failed to load ready-to-pack orders');
                     this.readyToPackOrders = data.orders ?? [];
-                    if (data.shop_domain) this.shopDomain = data.shop_domain;
-                    if (data.webshipper_account !== undefined) this.webshipperAccount = data.webshipper_account;
-                    if (data.VITE_APP_STATUS !== undefined) {
-                        this.appStatus = data.VITE_APP_STATUS === 'production' ? 'production' : 'test';
-                    }
+                    this.applyOrderResponseMetadata(data);
                 } catch (err) {
                     this.readyToPackError = err?.message ?? 'Failed to load ready-to-pack orders';
+                    this.clearIntegrationStatus();
                     this.readyToPackOrders = [];
                 } finally {
                     this.readyToPackLoading = false;
@@ -670,13 +728,10 @@
                     const data = await this.parseJsonResponse(res);
                     if (!res.ok) throw new Error(data.error || 'Failed to load ready for pickup orders');
                     this.readyForPickupOrders = data.orders ?? [];
-                    if (data.shop_domain) this.shopDomain = data.shop_domain;
-                    if (data.webshipper_account !== undefined) this.webshipperAccount = data.webshipper_account;
-                    if (data.VITE_APP_STATUS !== undefined) {
-                        this.appStatus = data.VITE_APP_STATUS === 'production' ? 'production' : 'test';
-                    }
+                    this.applyOrderResponseMetadata(data);
                 } catch (err) {
                     this.readyForPickupError = err?.message ?? 'Failed to load ready for pickup orders';
+                    this.clearIntegrationStatus();
                     this.readyForPickupOrders = [];
                 } finally {
                     this.readyForPickupLoading = false;
@@ -697,13 +752,10 @@
                     const data = await this.parseJsonResponse(res);
                     if (!res.ok) throw new Error(data.error || 'Failed to load on hold orders');
                     this.onHoldOrders = data.orders ?? [];
-                    if (data.shop_domain) this.shopDomain = data.shop_domain;
-                    if (data.webshipper_account !== undefined) this.webshipperAccount = data.webshipper_account;
-                    if (data.VITE_APP_STATUS !== undefined) {
-                        this.appStatus = data.VITE_APP_STATUS === 'production' ? 'production' : 'test';
-                    }
+                    this.applyOrderResponseMetadata(data);
                 } catch (err) {
                     this.onHoldError = err?.message ?? 'Failed to load on hold orders';
+                    this.clearIntegrationStatus();
                     this.onHoldOrders = [];
                 } finally {
                     this.onHoldLoading = false;
@@ -858,13 +910,10 @@
                     const data = await this.parseJsonResponse(res);
                     if (!res.ok) throw new Error(data.error || 'Failed to load upcoming orders');
                     this.upcomingOrders = data.orders ?? [];
-                    if (data.shop_domain) this.shopDomain = data.shop_domain;
-                    if (data.webshipper_account !== undefined) this.webshipperAccount = data.webshipper_account;
-                    if (data.VITE_APP_STATUS !== undefined) {
-                        this.appStatus = data.VITE_APP_STATUS === 'production' ? 'production' : 'test';
-                    }
+                    this.applyOrderResponseMetadata(data);
                 } catch (err) {
                     this.upcomingError = err?.message ?? 'Failed to load upcoming orders';
+                    this.clearIntegrationStatus();
                     this.upcomingOrders = [];
                 } finally {
                     this.upcomingLoading = false;
