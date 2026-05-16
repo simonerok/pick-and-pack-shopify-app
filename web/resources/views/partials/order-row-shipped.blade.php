@@ -42,7 +42,7 @@
         <span class="inline-flex px-2 py-0.5 rounded text-[11px] font-medium" :class="order.financial_status === 'paid' ? 'bg-emerald-100 text-emerald-800' : order.financial_status === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'" x-text="order.financial_status"></span>
     </td>
     <td class="px-4 py-2" data-label="Fulfillment">
-        <span class="inline-flex px-2 py-0.5 rounded text-[11px] font-medium" :class="order.fulfillment_status === 'fulfilled' ? 'bg-emerald-100 text-emerald-800' : order.fulfillment_status === 'partial' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600'" x-text="order.fulfillment_status || '—'"></span>
+        <span class="inline-flex px-2 py-0.5 rounded text-[11px] font-medium" :class="order.fulfillment_status === 'fulfilled' ? 'bg-emerald-100 text-emerald-800' : order.fulfillment_status === 'partial' ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600'" x-text="order.fulfillment_status || 'Fulfillment data unavailable'"></span>
     </td>
     <td class="px-2 py-2 align-middle w-20 md:w-20 box-border" data-label="Actions">
         <div class="flex justify-start md:justify-end">
@@ -114,6 +114,12 @@
                     >
                         <span x-text="returnLabelLoadingWsOrderId === order.webshipper?.order_id ? 'Creating...' : 'Create return label'"></span>
                     </a>
+                    <p
+                        x-show="!order.webshipper?.order_id"
+                        class="px-4 py-2 text-[11px] leading-4 text-slate-500 border-t border-slate-100"
+                    >
+                        This action is disabled because no live Webshipper order is linked.
+                    </p>
                 </x-slot>
             </x-dropdown>
         </div>
