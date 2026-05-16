@@ -57,9 +57,11 @@
                 @endisset
             </main>
 
-            <footer class="px-4 py-4 text-center text-xs text-slate-500">
-                Shopify orders come from the connected development store. BC and Webshipper values marked placeholder are test data references.
-            </footer>
+            @hasSection('footer_note')
+                <footer class="px-4 py-4 text-center text-xs text-slate-500">
+                    @yield('footer_note')
+                </footer>
+            @endif
         </div>
           @livewireScripts
     </body>
