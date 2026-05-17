@@ -246,6 +246,50 @@
                 }).catch(() => {});
             },
 
+            orderHasOnHoldTag(order) {
+                let tags = order?.tags ?? [];
+                if (typeof tags === 'string') {
+                    tags = tags.split(',').map((tag) => tag.trim()).filter(Boolean);
+                }
+                if (!Array.isArray(tags)) {
+                    return false;
+                }
+
+                return tags.some((tag) =>
+                    this.normalizeStatusValue(tag) === 'on_hold'
+                );
+            },
+
+            normalizeStatusValue(value) {
+                return String(value ?? '')
+                    .trim()
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '_')
+                    .replace(/^_+|_+$/g, '');
+            },
+
+            orderIsPickupInProgress(order) {
+                return order?.delivery_method === 'Pickup' &&
+                    (order.fulfillment_orders || []).some((e) => e?.node?.status === 'IN_PROGRESS');
+            },
+
+            orderBelongsInReadyToPack(order) {
+                return this.normalizeStatusValue(order?.financial_status) === 'paid' &&
+                    this.isAllProductsAvailable(order) &&
+                    !this.orderIsPickupInProgress(order);
+            },
+
+            tabForOrderAfterOnHoldRemoval(order) {
+                if (this.orderIsPickupInProgress(order)) {
+                    return 'ready-for-pickup';
+                }
+                if (this.orderBelongsInReadyToPack(order)) {
+                    return 'ready-to-pack';
+                }
+
+                return 'upcoming';
+            },
+
             /* Pick & Pack tab: deactivated — uncomment with template block + tab button
             get filteredAndSortedOrders() {
                 const filtered = this.orders.filter(o => new Date(o.created_at).getTime() >= twoMonthsAgo);
@@ -279,13 +323,11 @@
             */
 
             get readyToPackFilteredAndSorted() {
-                const pickupInProgress = (o) =>
-                    o.delivery_method === 'Pickup' &&
-                    (o.fulfillment_orders || []).some((e) => e?.node?.status === 'IN_PROGRESS');
                 const filtered = this.readyToPackOrders.filter(
                     (o) =>
                     new Date(o.created_at).getTime() >= twoMonthsAgo &&
-                    !pickupInProgress(o)
+                    !this.orderIsPickupInProgress(o) &&
+                    !this.orderHasOnHoldTag(o)
                 );
                 const allAvailable = (o) => {
                     if (!o.line_items || o.line_items.length === 0) return false;
@@ -320,7 +362,9 @@
                 twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
                 const filtered = this.readyForPickupOrders.filter(order => {
                     const created = new Date(order.created_at);
-                    return !isNaN(created.getTime()) && created >= twoMonthsAgo;
+                    return !isNaN(created.getTime()) &&
+                        created >= twoMonthsAgo &&
+                        !this.orderHasOnHoldTag(order);
                 });
                 const allAvailable = (o) => {
                     if (!o.line_items || o.line_items.length === 0) return false;
@@ -390,7 +434,9 @@
                 twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
                 const filtered = this.upcomingOrders.filter(order => {
                     const created = new Date(order.created_at);
-                    return !isNaN(created.getTime()) && created >= twoMonthsAgo;
+                    return !isNaN(created.getTime()) &&
+                        created >= twoMonthsAgo &&
+                        !this.orderHasOnHoldTag(order);
                 });
                 const allAvailable = (o) => {
                     if (!o.line_items || o.line_items.length === 0) return false;
@@ -738,8 +784,8 @@
                 }
             },
 
-            async loadOnHoldIfNeeded() {
-                if (this.onHoldOrders.length > 0 || this.onHoldLoading) return;
+            async loadOnHoldIfNeeded(force = false, seedOrder = null) {
+                if (!force && (this.onHoldOrders.length > 0 || this.onHoldLoading)) return;
                 this.onHoldLoading = true;
                 this.onHoldError = null;
                 try {
@@ -751,12 +797,18 @@
                     });
                     const data = await this.parseJsonResponse(res);
                     if (!res.ok) throw new Error(data.error || 'Failed to load on hold orders');
-                    this.onHoldOrders = data.orders ?? [];
+                    let orders = data.orders ?? [];
+                    if (seedOrder?.id && !orders.some(o => o.id === seedOrder.id)) {
+                        orders = [seedOrder, ...orders];
+                    }
+                    this.onHoldOrders = orders;
                     this.applyOrderResponseMetadata(data);
                 } catch (err) {
                     this.onHoldError = err?.message ?? 'Failed to load on hold orders';
                     this.clearIntegrationStatus();
-                    this.onHoldOrders = [];
+                    this.onHoldOrders = seedOrder?.id
+                        ? [seedOrder, ...this.onHoldOrders.filter(o => o.id !== seedOrder.id)]
+                        : [];
                 } finally {
                     this.onHoldLoading = false;
                 }
@@ -814,6 +866,7 @@
                     this.readyForPickupOrders = this.readyForPickupOrders.filter(o => o.id !== order.id);
                     this.onHoldOrders = [order, ...this.onHoldOrders.filter(o => o.id !== order.id)];
                     this.activeTab = 'on-hold';
+                    await this.loadOnHoldIfNeeded(true, order);
                     alert('On hold saved and added in Shopify.');
                 } catch (e) {
                     console.error('[OnHold API] add failed', e);
@@ -954,7 +1007,7 @@
                     let tags = [];
                     if (Array.isArray(order.tags)) tags = [...order.tags];
                     else if (typeof order.tags === 'string' && order.tags.trim() !== '') tags = order.tags.split(',').map(t => t.trim()).filter(Boolean);
-                    tags = tags.filter(t => t !== 'On hold');
+                    tags = tags.filter(t => this.normalizeStatusValue(t) !== 'on_hold');
                     order.tags = tags;
 
                     this.onHoldOrders = this.onHoldOrders.filter(o => o.id !== order.id);
@@ -965,12 +1018,7 @@
                     this.readyToPackOrders = drop(this.readyToPackOrders);
                     this.readyForPickupOrders = drop(this.readyForPickupOrders);
 
-                    let nextTab = 'upcoming';
-                    if (this.tabBeforeOnHold === 'ready-to-pack') {
-                        nextTab = 'ready-to-pack';
-                    } else if (this.tabBeforeOnHold === 'ready-for-pickup') {
-                        nextTab = 'ready-for-pickup';
-                    }
+                    const nextTab = this.tabForOrderAfterOnHoldRemoval(order);
                     this.activeTab = nextTab;
 
                     if (nextTab === 'ready-to-pack') {
