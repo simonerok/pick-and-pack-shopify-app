@@ -21,7 +21,8 @@ class ShopifyOrdersService
         bool $archived = false,
         ?array $financialStatusesForOpen = null,
         ?array $fulfillmentStatusesForOpen = null,
-        bool $ignoreFinancialFilterForOpen = false
+        bool $ignoreFinancialFilterForOpen = false,
+        ?string $orderQueryOverride = null
     ): array {
         $store = env('SHOPIFY_STORE_DOMAIN');
         $token = env('SHOPIFY_ACCESS_TOKEN');
@@ -33,9 +34,10 @@ class ShopifyOrdersService
             );
         }
 
-        $orderQuery = $archived
-            ? 'status:closed AND created_at:>=' . self::twoMonthsAgoISO()
-            : 'status:not_closed AND created_at:>=' . self::twoMonthsAgoISO();
+        $orderQuery = $orderQueryOverride
+            ?? ($archived
+                ? 'status:closed AND created_at:>=' . self::twoMonthsAgoISO()
+                : 'status:not_closed AND created_at:>=' . self::twoMonthsAgoISO());
 
         $store = trim($store);
         $host = preg_replace('#^https?://#', '', $store);
@@ -213,7 +215,10 @@ class ShopifyOrdersService
 
     public static function fetchOrdersReadyToPack(): array
     {
-        return self::fetchOrders(false, ['paid']);
+        $data = self::fetchOrders(false, ['paid']);
+        $data['orders'] = self::ordersWithoutOnHoldTag($data['orders'] ?? []);
+
+        return $data;
     }
 
     public static function fetchOrdersReadyForPickup(): array
@@ -239,6 +244,9 @@ class ShopifyOrdersService
                 if ($createdAt < $cutoff) {
                     return false;
                 }
+                if (self::orderHasOnHoldTag($order)) {
+                    return false;
+                }
 
                 return self::orderIsReadyForPickup((int) ($order['id'] ?? 0));
             }
@@ -250,10 +258,10 @@ class ShopifyOrdersService
 
     public static function fetchOrdersOnHold(): array
     {
-        $openData = self::fetchOrders(false, null, null, true);
+        $onHoldQuery = 'status:not_closed AND tag:"On hold" AND created_at:>=' . self::twoMonthsAgoISO();
+        $openData = self::fetchOrders(false, null, null, true, $onHoldQuery);
         $openOrders = $openData['orders'] ?? [];
 
-        // Open, non-archived orders: every order with the On hold tag.
         $openOnHold = array_values(array_filter(
             $openOrders,
             static fn(array $order): bool => self::orderHasOnHoldTag($order)
@@ -699,6 +707,14 @@ class ShopifyOrdersService
         }
 
         return false;
+    }
+
+    private static function ordersWithoutOnHoldTag(array $orders): array
+    {
+        return array_values(array_filter(
+            $orders,
+            static fn(array $order): bool => ! self::orderHasOnHoldTag($order)
+        ));
     }
 
     private static function orderIsFullyAvailable(array $order): bool

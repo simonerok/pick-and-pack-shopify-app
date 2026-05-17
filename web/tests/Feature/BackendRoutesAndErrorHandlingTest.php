@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -62,6 +63,68 @@ class BackendRoutesAndErrorHandlingTest extends TestCase
             ->assertJsonPath('integration_status.shopify.status', 'loaded')
             ->assertJsonPath('integration_status.sources.business_central.status', 'disabled')
             ->assertJsonPath('integration_status.sources.webshipper.status', 'disabled');
+    }
+
+    public function test_on_hold_orders_are_loaded_with_shopify_tag_query(): void
+    {
+        $this->useShopifyTestConfig();
+        Http::fakeSequence($this->shopifyGraphqlUrl())
+            ->push($this->ordersResponse([
+                $this->shopifyOrderNode([
+                    'id' => 'gid://shopify/Order/345',
+                    'name' => '#1345',
+                    'number' => 1345,
+                    'tags' => ['seed', 'On hold'],
+                ]),
+            ]));
+
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->getJson('/api/shopify/orders?view=on-hold');
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('orders.0.id', 345)
+            ->assertJsonPath('orders.0.tags.1', 'On hold');
+
+        Http::assertSent(function (Request $request): bool {
+            $shopifyQuery = (string) ($request->data()['variables']['query'] ?? '');
+
+            return $request->url() === $this->shopifyGraphqlUrl()
+                && str_contains($shopifyQuery, 'status:not_closed')
+                && str_contains($shopifyQuery, 'tag:"On hold"');
+        });
+    }
+
+    public function test_ready_to_pack_orders_exclude_on_hold_tagged_orders(): void
+    {
+        $this->useShopifyTestConfig();
+        Http::fakeSequence($this->shopifyGraphqlUrl())
+            ->push($this->ordersResponse([
+                $this->shopifyOrderNode([
+                    'id' => 'gid://shopify/Order/456',
+                    'name' => '#1456',
+                    'number' => 1456,
+                    'tags' => ['seed', 'On hold'],
+                ]),
+                $this->shopifyOrderNode([
+                    'id' => 'gid://shopify/Order/457',
+                    'name' => '#1457',
+                    'number' => 1457,
+                    'tags' => ['seed'],
+                ]),
+            ]));
+
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->getJson('/api/shopify/orders?view=ready-to-pack');
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(1, 'orders')
+            ->assertJsonPath('orders.0.id', 457);
     }
 
     public function test_shopify_order_errors_are_returned_as_user_friendly_messages(): void
@@ -219,6 +282,64 @@ class BackendRoutesAndErrorHandlingTest extends TestCase
                         'endCursor' => null,
                     ],
                 ],
+            ],
+        ];
+    }
+
+    private function ordersResponse(array $nodes): array
+    {
+        return [
+            'data' => [
+                'orders' => [
+                    'edges' => array_map(
+                        static fn(array $node): array => ['node' => $node],
+                        $nodes
+                    ),
+                    'pageInfo' => [
+                        'hasNextPage' => false,
+                        'endCursor' => null,
+                    ],
+                ],
+            ],
+        ];
+    }
+
+    private function shopifyOrderNode(array $overrides = []): array
+    {
+        return array_replace_recursive([
+            'id' => 'gid://shopify/Order/123',
+            'name' => '#1123',
+            'number' => 1123,
+            'email' => 'test@example.com',
+            'createdAt' => '2026-05-16T10:00:00Z',
+            'updatedAt' => '2026-05-16T10:00:00Z',
+            'displayFinancialStatus' => 'PAID',
+            'displayFulfillmentStatus' => 'UNFULFILLED',
+            'totalPriceSet' => $this->moneySet('100.00'),
+            'subtotalPriceSet' => $this->moneySet('100.00'),
+            'totalTaxSet' => $this->moneySet('0.00'),
+            'cancelledAt' => null,
+            'closedAt' => null,
+            'tags' => [],
+            'note' => null,
+            'sourceName' => 'web',
+            'billingAddress' => null,
+            'shippingAddress' => null,
+            'lineItems' => ['edges' => []],
+            'fulfillmentOrders' => ['edges' => []],
+        ], $overrides);
+    }
+
+    private function moneySet(string $amount): array
+    {
+        return [
+            'presentmentMoney' => [
+                'amount' => $amount,
+                'currencyCode' => 'USD',
+            ],
+            'shopMoney' => [
+                'amount' => $amount,
+                'currencyCode' => 'USD',
             ],
         ];
     }
