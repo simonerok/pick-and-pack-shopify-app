@@ -60,7 +60,7 @@ class AuthenticationTest extends TestCase
 
         $this->actingAs($user);
 
-        $response = $this->get('/home');
+        $response = $this->get('/');
 
         $response
             ->assertOk()
@@ -73,13 +73,8 @@ class AuthenticationTest extends TestCase
 
         $this->actingAs($user);
 
-        $component = Volt::test('layout.navigation');
-
-        $component->call('logout');
-
-        $component
-            ->assertHasNoErrors()
-            ->assertRedirect('/');
+        $this->post(route('logout'))
+            ->assertRedirect(route('login', absolute: false));
 
         $this->assertGuest();
     }
