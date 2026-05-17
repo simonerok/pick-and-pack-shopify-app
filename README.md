@@ -434,3 +434,16 @@ Fix any reported issues so CI passes. Some violations can be auto-fixed with:
 ```shell
 ./vendor/bin/phpcbf --standard=PSR12 app routes
 ```
+
+## Backend tests
+
+The backend feature tests cover protected routes, authenticated order endpoints, friendly error messages, missing integration data, activity logging, and Telescope access gates.
+
+Run the PHPUnit test suite from `web/`:
+
+```shell
+cd web
+php artisan test
+```
+
+The tests use an in-memory SQLite database and fake external API responses, so they do not call real Shopify, Webshipper, or Business Central services.
